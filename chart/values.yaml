@@ -5,7 +5,7 @@
 replicaCount: 2
 
 image:
-  repository: vgurukool/ashta-lakshmi
+  repository: ayusing/ashta-lakshmi
   pullPolicy: IfNotPresent
   tag: "latest"
 
