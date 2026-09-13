@@ -5,8 +5,7 @@ import {
   Coins,
   TrendingUp,
   PieChart,
-  ClipboardList,
-  GraduationCap
+  ClipboardList
 } from 'lucide-react';
 import { INITIAL_LAKSHMI_DATA, getFinalLakshmiScore, getScoreRangeConfig } from '../data/lakshmiData';
 
@@ -58,35 +57,6 @@ export function Sidebar({ activeTab, setActiveTab, lakshmiState }) {
 
       {/* Nav Menu */}
       <nav style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', flex: 1 }}>
-        {/* Gurukool Academy Landing Hub */}
-        <button
-          className={`nav-item ${activeTab === 'academy' ? 'active' : ''}`}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 14px',
-            borderRadius: '10px',
-            border: 'none',
-            backgroundColor: activeTab === 'academy' ? '#D97706' : 'transparent',
-            color: activeTab === 'academy' ? 'white' : '#CBD5E1',
-            fontWeight: 700,
-            fontSize: '13.5px',
-            cursor: 'pointer',
-            textAlign: 'left',
-            marginBottom: '2px'
-          }}
-          onClick={() => setActiveTab('academy')}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <GraduationCap size={17} color={activeTab === 'academy' ? 'white' : '#F59E0B'} />
-            <span>Gurukool Academy</span>
-          </div>
-          <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '6px', background: activeTab === 'academy' ? 'rgba(0,0,0,0.2)' : 'rgba(245, 158, 11, 0.2)', color: activeTab === 'academy' ? '#FEF3C7' : '#FBBF24' }}>
-            Hub
-          </span>
-        </button>
-
         {/* Main Dashboard Tab */}
         <button
           className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}

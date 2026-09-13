@@ -5,13 +5,12 @@ import { LakshmiDetailPage } from './pages/LakshmiDetailPage';
 import { TrendsPage } from './pages/TrendsPage';
 import { VedicSpendingPage } from './pages/VedicSpendingPage';
 import { QuestionnairePage } from './pages/QuestionnairePage';
-import { AcademyLandingPage } from './pages/AcademyLandingPage';
 import {
   INITIAL_LAKSHMI_DATA,
   SUPPORTED_YEARS,
   getDefaultMultiYearState
 } from './data/lakshmiData';
-import { Coins, Sun, TrendingUp, Calendar, Copy, RotateCcw, LogIn, GraduationCap } from 'lucide-react';
+import { Coins, Sun, TrendingUp, Calendar, Copy, RotateCcw, LogIn } from 'lucide-react';
 
 export function App({ keycloak, authenticated = false }) {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -135,19 +134,12 @@ export function App({ keycloak, authenticated = false }) {
           zIndex: 30
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {activeTab === 'academy' ? (
-              <GraduationCap size={24} color="#F59E0B" />
-            ) : (
-              <Sun size={22} color="#FBBF24" />
-            )}
+            <Sun size={22} color="#FBBF24" />
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'white' }}>
-                {activeTab === 'academy'
-                  ? 'Gurukool Academy — Classical Vedic Wisdom & Modern Learning'
-                  : 'Ashta Lakshmi — Vedic Wealth Assessment'}
+                Ashta Lakshmi — Vedic Wealth Assessment
               </h2>
               <span style={{ fontSize: '12px', color: '#94A3B8' }}>
-                {activeTab === 'academy' && 'Unified Learning Portal • Sacred Literature, Sanskrit, Philosophy & AI Tutoring'}
                 {activeTab === 'dashboard' && 'Overview Dashboard & Harmony Index'}
                 {activeTab === 'questionnaire' && 'Comprehensive Vedic Questionnaire (8 Lakshmis)'}
                 {activeTab === 'spending' && 'Ashta Lakshmi Holistic Spending Audit & Life-Balance Matrix'}
@@ -159,7 +151,7 @@ export function App({ keycloak, authenticated = false }) {
 
           {/* Right Header Actions: Quick Tools */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {activeTab !== 'spending' && activeTab !== 'academy' && (
+            {activeTab !== 'spending' && (
               <>
                 {/* Quick Action: Clone Previous Year */}
                 <button
@@ -257,14 +249,6 @@ export function App({ keycloak, authenticated = false }) {
 
         {/* Dynamic Pages */}
         <div style={{ flex: 1 }}>
-          {activeTab === 'academy' && (
-            <AcademyLandingPage
-              keycloak={keycloak}
-              authenticated={isAuthenticated}
-              onNavigateTab={setActiveTab}
-            />
-          )}
-
           {activeTab === 'dashboard' && (
             <DashboardPage
               lakshmiState={currentYearLakshmiState}
