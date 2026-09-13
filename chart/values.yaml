@@ -6,8 +6,8 @@ replicaCount: 2
 
 image:
   repository: ayusing/ashta-lakshmi
-  pullPolicy: IfNotPresent
-  tag: "latest"
+  pullPolicy: Always
+  tag: "v1.1.0"
 
 imagePullSecrets: []
 nameOverride: ""
