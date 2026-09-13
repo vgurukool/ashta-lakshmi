@@ -52,10 +52,20 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
+    - host: vgurukool.com
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: www.vgurukool.com
+      paths:
+        - path: /
+          pathType: Prefix
   tls:
     - secretName: ashta-lakshmi-tls
       hosts:
         - ashta-lakshmi.vgurukool.com
+        - vgurukool.com
+        - www.vgurukool.com
 
 resources:
   limits:

@@ -5,15 +5,17 @@ import { LakshmiDetailPage } from './pages/LakshmiDetailPage';
 import { TrendsPage } from './pages/TrendsPage';
 import { VedicSpendingPage } from './pages/VedicSpendingPage';
 import { QuestionnairePage } from './pages/QuestionnairePage';
+import { AcademyLandingPage } from './pages/AcademyLandingPage';
 import {
   INITIAL_LAKSHMI_DATA,
   SUPPORTED_YEARS,
   getDefaultMultiYearState
 } from './data/lakshmiData';
-import { Coins, Sun, TrendingUp, Calendar, Copy, RotateCcw } from 'lucide-react';
+import { Coins, Sun, TrendingUp, Calendar, Copy, RotateCcw, LogIn, GraduationCap } from 'lucide-react';
 
-export function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+export function App({ keycloak, authenticated = false }) {
+  const [activeTab, setActiveTab] = useState('academy');
+  const isAuthenticated = Boolean(authenticated || keycloak?.authenticated);
   const [selectedYear, setSelectedYear] = useState('2026');
 
   // Load multi-year state from localStorage or defaults
@@ -133,12 +135,19 @@ export function App() {
           zIndex: 30
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Sun size={22} color="#FBBF24" />
+            {activeTab === 'academy' ? (
+              <GraduationCap size={24} color="#F59E0B" />
+            ) : (
+              <Sun size={22} color="#FBBF24" />
+            )}
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'white' }}>
-                Ashta Lakshmi — Vedic Wealth Assessment
+                {activeTab === 'academy'
+                  ? 'Gurukool Academy — Classical Vedic Wisdom & Modern Learning'
+                  : 'Ashta Lakshmi — Vedic Wealth Assessment'}
               </h2>
               <span style={{ fontSize: '12px', color: '#94A3B8' }}>
+                {activeTab === 'academy' && 'Unified Learning Portal • Sacred Literature, Sanskrit, Philosophy & AI Tutoring'}
                 {activeTab === 'dashboard' && 'Overview Dashboard & Harmony Index'}
                 {activeTab === 'questionnaire' && 'Comprehensive Vedic Questionnaire (8 Lakshmis)'}
                 {activeTab === 'spending' && 'Ashta Lakshmi Holistic Spending Audit & Life-Balance Matrix'}
@@ -150,7 +159,7 @@ export function App() {
 
           {/* Right Header Actions: Quick Tools */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {activeTab !== 'spending' && (
+            {activeTab !== 'spending' && activeTab !== 'academy' && (
               <>
                 {/* Quick Action: Clone Previous Year */}
                 <button
@@ -196,11 +205,66 @@ export function App() {
                 </button>
               </>
             )}
+            {isAuthenticated ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '12px', paddingLeft: '12px', borderLeft: '1px solid #334155' }}>
+                <span style={{ fontSize: '12px', color: '#38BDF8', fontWeight: 600 }}>
+                  👤 {keycloak?.tokenParsed?.preferred_username || keycloak?.tokenParsed?.given_name || 'Member'}
+                </span>
+                <button
+                  onClick={() => keycloak ? keycloak.logout({ redirectUri: window.location.origin }) : null}
+                  title="Sign Out of Keycloak SSO"
+                  style={{
+                    background: '#EF4444',
+                    border: 'none',
+                    padding: '5px 10px',
+                    borderRadius: '6px',
+                    color: 'white',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '12px', paddingLeft: '12px', borderLeft: '1px solid #334155' }}>
+                <button
+                  onClick={() => keycloak ? keycloak.login() : window.location.reload()}
+                  title="Sign In with Keycloak SSO"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'linear-gradient(135deg, #D97706, #B45309)',
+                    border: 'none',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    color: 'white',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(217, 119, 6, 0.4)'
+                  }}
+                >
+                  <LogIn size={13} />
+                  Sign In
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
         {/* Dynamic Pages */}
         <div style={{ flex: 1 }}>
+          {activeTab === 'academy' && (
+            <AcademyLandingPage
+              keycloak={keycloak}
+              authenticated={isAuthenticated}
+              onNavigateTab={setActiveTab}
+            />
+          )}
+
           {activeTab === 'dashboard' && (
             <DashboardPage
               lakshmiState={currentYearLakshmiState}
