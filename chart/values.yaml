@@ -7,7 +7,7 @@ replicaCount: 2
 image:
   repository: ayusing/ashta-lakshmi
   pullPolicy: Always
-  tag: "v1.3.0"
+  tag: "v1.4.0"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -52,20 +52,10 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-    - host: vgurukool.com
-      paths:
-        - path: /
-          pathType: Prefix
-    - host: www.vgurukool.com
-      paths:
-        - path: /
-          pathType: Prefix
   tls:
     - secretName: ashta-lakshmi-tls
       hosts:
         - ashta-lakshmi.vgurukool.com
-        - vgurukool.com
-        - www.vgurukool.com
 
 resources:
   limits:

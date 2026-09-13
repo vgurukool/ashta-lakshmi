@@ -14,7 +14,7 @@ import {
 import { Coins, Sun, TrendingUp, Calendar, Copy, RotateCcw, LogIn, GraduationCap } from 'lucide-react';
 
 export function App({ keycloak, authenticated = false }) {
-  const [activeTab, setActiveTab] = useState('academy');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const isAuthenticated = Boolean(authenticated || keycloak?.authenticated);
   const [selectedYear, setSelectedYear] = useState('2026');
 
