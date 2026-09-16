@@ -109,6 +109,33 @@ export function Sidebar({ activeTab, setActiveTab, lakshmiState }) {
           </span>
         </button>
 
+        {/* Ashta Lakshmi Interconnected Mandala Tab */}
+        <button
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 14px',
+            borderRadius: '10px',
+            border: 'none',
+            backgroundColor: activeTab === 'mandala' ? 'rgba(245, 158, 11, 0.25)' : 'transparent',
+            color: activeTab === 'mandala' ? '#FBBF24' : '#CBD5E1',
+            fontWeight: activeTab === 'mandala' ? 800 : 600,
+            fontSize: '13.5px',
+            cursor: 'pointer',
+            textAlign: 'left'
+          }}
+          onClick={() => setActiveTab('mandala')}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Sun size={17} color={activeTab === 'mandala' ? '#FBBF24' : '#94A3B8'} />
+            <span>Lakshmi Mandala</span>
+          </div>
+          <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '6px', background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24' }}>
+            Symbiosis
+          </span>
+        </button>
+
         {/* Vedic Spending Audit Tab */}
         <button
           style={{

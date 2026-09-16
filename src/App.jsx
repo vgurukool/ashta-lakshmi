@@ -5,6 +5,7 @@ import { LakshmiDetailPage } from './pages/LakshmiDetailPage';
 import { TrendsPage } from './pages/TrendsPage';
 import { VedicSpendingPage } from './pages/VedicSpendingPage';
 import { QuestionnairePage } from './pages/QuestionnairePage';
+import { MandalaInterconnectedPage } from './pages/MandalaInterconnectedPage';
 import {
   INITIAL_LAKSHMI_DATA,
   SUPPORTED_YEARS,
@@ -141,6 +142,7 @@ export function App({ keycloak, authenticated = false }) {
               </h2>
               <span style={{ fontSize: '12px', color: '#94A3B8' }}>
                 {activeTab === 'dashboard' && 'Overview Dashboard & Harmony Index'}
+                {activeTab === 'mandala' && 'Ashta Lakshmi Sacred Interdependency Matrix & Closed-Loop Network'}
                 {activeTab === 'questionnaire' && 'Comprehensive Vedic Questionnaire (8 Lakshmis)'}
                 {activeTab === 'spending' && 'Ashta Lakshmi Holistic Spending Audit & Life-Balance Matrix'}
                 {activeTab === 'trends' && 'Longitudinal Trends & Gain/Loss Analysis'}
@@ -258,6 +260,11 @@ export function App({ keycloak, authenticated = false }) {
               onSelectTab={setActiveTab}
               onResetAll={handleResetYear}
             />
+          )}
+
+          {/* Ashta Lakshmi Interconnected Mandala Page */}
+          {activeTab === 'mandala' && (
+            <MandalaInterconnectedPage />
           )}
 
           {/* Single Unified Vedic Questionnaire Page */}

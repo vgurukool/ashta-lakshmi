@@ -332,6 +332,33 @@ export function DashboardPage({
               </div>
             </div>
           </div>
+
+          {/* Interactive Mandala Feature Banner */}
+          <div
+            onClick={() => onSelectTab('mandala')}
+            style={{
+              background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
+              borderRadius: '16px',
+              padding: '18px 20px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 15px rgba(245, 158, 11, 0.15)',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <span style={{ fontSize: '16px' }}>✨</span>
+              <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#FBBF24', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Lakshmi Mandala
+              </span>
+            </div>
+            <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0 0 10px 0', lineHeight: 1.4 }}>
+              Explore the 8 Lakshmis' closed-loop synergies, pairwise feeds, and dynamic balance simulator.
+            </p>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700, color: '#FCD34D' }}>
+              Launch Interactive Matrix <ArrowRight size={13} />
+            </span>
+          </div>
         </div>
       </div>
     </div>
