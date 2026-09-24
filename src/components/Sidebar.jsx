@@ -214,9 +214,13 @@ export function Sidebar({
               <span className="flex items-center gap-2">
                 <span>🔬</span> Empirical Assessment
               </span>
-              <span className="text-[9px] font-bold text-purple-300 bg-purple-950 px-1.5 py-0.5 rounded border border-purple-800/60">
-                Apps Feed
-              </span>
+              {isGuest ? (
+                <span className="text-[10px] text-slate-500">🔒 Gated</span>
+              ) : (
+                <span className="text-[9px] font-bold text-purple-300 bg-purple-950 px-1.5 py-0.5 rounded border border-purple-800/60">
+                  Apps Feed
+                </span>
+              )}
             </button>
 
             {/* Multi-Year Trends */}
@@ -231,9 +235,13 @@ export function Sidebar({
               <span className="flex items-center gap-2">
                 <span>📈</span> Multi-Year Trends
               </span>
-              <span className="text-[9px] font-bold text-cyan-300 bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-800/60 font-mono">
-                2024–2026
-              </span>
+              {isGuest ? (
+                <span className="text-[10px] text-slate-500">🔒 Gated</span>
+              ) : (
+                <span className="text-[9px] font-bold text-cyan-300 bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-800/60 font-mono">
+                  2024–2026
+                </span>
+              )}
             </button>
           </nav>
         </div>

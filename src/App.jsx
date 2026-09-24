@@ -17,7 +17,7 @@ import {
   findCriticalBottleneck,
   classifyArchetype
 } from './data/lakshmiData';
-import { LogIn, LogOut, RotateCcw, AlertTriangle } from 'lucide-react';
+import { LogIn, LogOut, RotateCcw, AlertTriangle, Lock, ShieldAlert, X } from 'lucide-react';
 
 export function App({ keycloak, authenticated = false }) {
   // If authenticated via Keycloak or prop
@@ -110,7 +110,26 @@ export function App({ keycloak, authenticated = false }) {
     }));
   };
 
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalReason, setAuthModalReason] = useState('');
+
+  const GATED_TABS = ['radar', 'wealthHub', 'wealthDetail', 'empirical', 'trends'];
+
+  const handleNavigateTab = (tabId, reason = '') => {
+    if (!isAuthenticated && GATED_TABS.includes(tabId)) {
+      setAuthModalReason(reason || 'Sign in with Keycloak to access your personal diagnostic radar, individual wealth sanctuaries, companion app telemetry, and multi-year trajectory data.');
+      setShowAuthModal(true);
+      return;
+    }
+    setActiveTab(tabId);
+  };
+
   const handleSelectLakshmi = (id) => {
+    if (!isAuthenticated) {
+      setAuthModalReason('The 8 Individual Lakshmi Wealth Sanctuaries contain private mastery scores, 14-day prescriptive sadhana routines, and Socratic AI counseling. Please sign in with Keycloak to access.');
+      setShowAuthModal(true);
+      return;
+    }
     setSelectedLakshmiId(id);
     setActiveTab('wealthDetail');
   };
@@ -129,7 +148,7 @@ export function App({ keycloak, authenticated = false }) {
       {/* Sidebar Navigation */}
       <Sidebar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleNavigateTab}
         lakshmiState={currentYearLakshmiState}
         onSelectLakshmi={handleSelectLakshmi}
         isAuthenticated={isAuthenticated}
@@ -294,14 +313,14 @@ export function App({ keycloak, authenticated = false }) {
         <main className="flex-1 overflow-y-auto">
           {activeTab === 'overview' && (
             <OverviewPage
-              onNavigate={setActiveTab}
+              onNavigate={handleNavigateTab}
               onSelectLakshmi={handleSelectLakshmi}
             />
           )}
 
           {activeTab === 'matrix' && (
             <MandalaInterconnectedPage
-              onNavigate={setActiveTab}
+              onNavigate={handleNavigateTab}
               onSelectLakshmi={handleSelectLakshmi}
             />
           )}
@@ -310,7 +329,7 @@ export function App({ keycloak, authenticated = false }) {
             <QuestionnairePage
               lakshmiState={currentYearLakshmiState}
               onUpdateLakshmi={handleUpdateLakshmi}
-              onNavigate={setActiveTab}
+              onNavigate={handleNavigateTab}
               isAuthenticated={isAuthenticated}
               keycloak={keycloak}
             />
@@ -322,7 +341,7 @@ export function App({ keycloak, authenticated = false }) {
               multiYearState={multiYearState}
               selectedYear={selectedYear}
               setSelectedYear={setSelectedYear}
-              onNavigate={setActiveTab}
+              onNavigate={handleNavigateTab}
               onSelectLakshmi={handleSelectLakshmi}
             />
           )}
@@ -331,7 +350,7 @@ export function App({ keycloak, authenticated = false }) {
             <WealthHubPage
               lakshmiState={currentYearLakshmiState}
               onSelectLakshmi={handleSelectLakshmi}
-              onNavigate={setActiveTab}
+              onNavigate={handleNavigateTab}
             />
           )}
 
@@ -340,7 +359,7 @@ export function App({ keycloak, authenticated = false }) {
               lakshmiId={selectedLakshmiId}
               lakshmiState={currentYearLakshmiState}
               onUpdateLakshmi={handleUpdateLakshmi}
-              onBackToDashboard={() => setActiveTab('radar')}
+              onBackToDashboard={() => handleNavigateTab('radar')}
               onSelectLakshmi={handleSelectLakshmi}
               isAuthenticated={isAuthenticated}
             />
@@ -349,7 +368,7 @@ export function App({ keycloak, authenticated = false }) {
           {activeTab === 'empirical' && (
             <EmpiricalTelemetryPage
               lakshmiState={currentYearLakshmiState}
-              onNavigate={setActiveTab}
+              onNavigate={handleNavigateTab}
               onSelectLakshmi={handleSelectLakshmi}
               isAuthenticated={isAuthenticated}
               keycloak={keycloak}
@@ -358,12 +377,79 @@ export function App({ keycloak, authenticated = false }) {
 
           {activeTab === 'trends' && (
             <TrendsPage
-              onNavigate={setActiveTab}
+              onNavigate={handleNavigateTab}
               onSelectLakshmi={handleSelectLakshmi}
             />
           )}
         </main>
       </div>
+
+      {/* AUTHENTICATION REQUIRED MODAL FOR GATED PAGES */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#0D1424] border border-amber-500/40 w-full max-w-md rounded-2xl shadow-2xl p-6 relative text-center space-y-4">
+            <button
+              onClick={() => setShowAuthModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white transition cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 shadow-lg shadow-amber-500/10">
+              <Lock size={26} />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-black text-white tracking-wide">
+                Keycloak Authentication Required
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                {authModalReason || 'This section contains sovereign personal diagnostic data, 14-day prescriptive sadhana routines, and empirical companion app feeds.'}
+              </p>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-xl text-left space-y-2 text-[11px] text-slate-300">
+              <div className="flex items-center gap-2 font-bold text-amber-400">
+                <span>☸</span>
+                <span>Unlocked with your Gurukool SSO account:</span>
+              </div>
+              <ul className="space-y-1 text-slate-400 list-disc list-inside">
+                <li>Personal 8-Spoke Mandala Radar assessment profile</li>
+                <li>8 Individual Wealth Portals with full score breakdowns</li>
+                <li>Prescriptive 14-day Sadhana daily checklist</li>
+                <li>Live empirical companion app telemetry ingestion</li>
+              </ul>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <button
+                onClick={() => {
+                  setShowAuthModal(false);
+                  if (keycloak) {
+                    keycloak.login({ redirectUri: window.location.origin + '/' });
+                  } else {
+                    setIsAuthenticated(true);
+                  }
+                }}
+                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs py-3 rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <LogIn size={15} />
+                <span>Sign In with Keycloak SSO</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowAuthModal(false);
+                  setActiveTab('questionnaire');
+                }}
+                className="w-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2.5 rounded-xl border border-slate-700 transition cursor-pointer"
+              >
+                <span>Take 3-Min Assessment in Guest Mode</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
