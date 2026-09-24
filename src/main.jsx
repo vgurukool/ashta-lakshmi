@@ -12,26 +12,28 @@ if (window.location.hash && (window.location.hash.includes('error=') || window.l
   window.history.replaceState(null, '', window.location.pathname + window.location.search);
 }
 
-// Initialize Keycloak with check-sso to allow public guest exploration
+const renderApp = (authenticated = false) => {
+  root.render(
+    <React.StrictMode>
+      <App keycloak={keycloak} authenticated={authenticated} />
+    </React.StrictMode>
+  );
+};
+
+// Immediately render the application in guest exploration mode
+renderApp(false);
+
+// Initialize Keycloak with non-blocking silent iframe SSO check to prevent redirect toggling loops
 keycloak.init({
   onLoad: 'check-sso',
+  silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
+  silentCheckSsoFallback: false,
   checkLoginIframe: false,
-  pkceMethod: 'S256',
-  redirectUri: window.location.origin + '/'
+  pkceMethod: 'S256'
 }).then((authenticated) => {
-  root.render(
-    <React.StrictMode>
-      <App keycloak={keycloak} authenticated={Boolean(authenticated)} />
-    </React.StrictMode>
-  );
-}).catch((err) => {
-  console.warn('Keycloak authentication check-sso failed or offline, launching in public guest mode:', err);
-  if (window.location.hash) {
-    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  if (authenticated) {
+    renderApp(true);
   }
-  root.render(
-    <React.StrictMode>
-      <App keycloak={null} authenticated={false} />
-    </React.StrictMode>
-  );
+}).catch((err) => {
+  console.warn('Keycloak SSO initialization notice (running in public guest mode):', err);
 });
