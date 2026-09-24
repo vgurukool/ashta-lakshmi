@@ -1,516 +1,402 @@
 import React, { useState, useMemo } from 'react';
 import {
-  ChevronDown,
-  ChevronUp,
   Sparkles,
-  Search,
-  Plus,
-  Trash2,
-  Sliders,
+  ClipboardList,
+  CheckCircle2,
+  Lock,
+  ArrowRight,
+  RotateCcw,
+  Zap,
   HelpCircle,
   Award
 } from 'lucide-react';
 import {
-  calculateLakshmiScore,
-  getScoreRangeConfig,
-  INITIAL_LAKSHMI_DATA
+  INITIAL_LAKSHMI_DATA,
+  LIKERT_ANCHORS,
+  calculateHarmonicIndex,
+  findCriticalBottleneck,
+  classifyArchetype
 } from '../data/lakshmiData';
 
 export function QuestionnairePage({
   lakshmiState,
-  onUpdateLakshmi
+  onUpdateLakshmi,
+  onNavigate,
+  isAuthenticated,
+  keycloak
 }) {
-  // Accordion state: map of lakshmi.id -> boolean (open/closed)
-  const [expandedMap, setExpandedMap] = useState(() => {
-    const init = {};
-    INITIAL_LAKSHMI_DATA.forEach(l => {
-      init[l.id] = true; // All 8 accordions expanded by default
+  const [assessmentDepth, setAssessmentDepth] = useState('quick'); // 'quick' (8), 'standard' (24), 'deep' (64)
+  const [showGuestModal, setShowGuestModal] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('all');
+
+  // Compute live scores for all 8 Lakshmis
+  const dimensionScores = useMemo(() => {
+    const scores = {};
+    INITIAL_LAKSHMI_DATA.forEach(def => {
+      const cur = lakshmiState[def.id] || def;
+      const qList = cur.questions || [];
+      if (qList.length === 0) {
+        scores[def.id] = 50;
+      } else {
+        const sum = qList.reduce((acc, q) => acc + (Number(q.score) || 0), 0);
+        scores[def.id] = Math.round(sum / qList.length);
+      }
     });
-    return init;
-  });
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [newQuestionTexts, setNewQuestionTexts] = useState({});
-
-  const toggleAccordion = (id) => {
-    setExpandedMap(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const handleExpandAll = () => {
-    const allOpen = {};
-    INITIAL_LAKSHMI_DATA.forEach(l => { allOpen[l.id] = true; });
-    setExpandedMap(allOpen);
-  };
-
-  const handleCollapseAll = () => {
-    const allClosed = {};
-    INITIAL_LAKSHMI_DATA.forEach(l => { allClosed[l.id] = false; });
-    setExpandedMap(allClosed);
-  };
-
-  // Compute live pure question-based assessment scores for all 8 Lakshmis
-  const computedList = useMemo(() => {
-    return INITIAL_LAKSHMI_DATA.map(def => {
-      const live = lakshmiState[def.id] || def;
-      const questions = live.questions || def.questions || [];
-      const score = calculateLakshmiScore(questions);
-      const range = getScoreRangeConfig(score);
-      return {
-        ...live,
-        questions,
-        calculatedScore: score,
-        range
-      };
-    });
+    return scores;
   }, [lakshmiState]);
 
-  // Overall Question Assessment Harmony Index
-  const totalScoreSum = computedList.reduce((sum, item) => sum + item.calculatedScore, 0);
-  const harmonyIndex = Math.round(totalScoreSum / computedList.length);
-  const harmonyRange = getScoreRangeConfig(harmonyIndex);
+  const harmonicIndex = calculateHarmonicIndex(dimensionScores);
+  const bottleneck = findCriticalBottleneck(dimensionScores);
+  const archetype = classifyArchetype(dimensionScores, harmonicIndex);
 
-  // Total questions count across all Lakshmis
-  const totalQuestions = computedList.reduce((sum, item) => sum + item.questions.length, 0);
+  // Filter questions based on depth
+  const questionsToRender = useMemo(() => {
+    const list = [];
+    INITIAL_LAKSHMI_DATA.forEach(def => {
+      const cur = lakshmiState[def.id] || def;
+      const qList = cur.questions || [];
 
-  // Handlers for question scoring
-  const handleScoreChange = (lakshmiId, qId, newScore) => {
-    const lakshmi = lakshmiState[lakshmiId] || INITIAL_LAKSHMI_DATA.find(l => l.id === lakshmiId);
-    const updatedQuestions = (lakshmi.questions || []).map(q => {
-      if (q.id === qId) {
-        return { ...q, score: Math.min(100, Math.max(1, parseInt(newScore, 10) || 1)) };
+      if (assessmentDepth === 'quick') {
+        // 1 question per dimension
+        if (qList[0]) {
+          list.push({ ...qList[0], lakshmiId: def.id, lakshmiName: def.sanskritName, emoji: def.emoji, color: def.colorName });
+        }
+      } else if (assessmentDepth === 'standard') {
+        // up to 3 questions per dimension
+        qList.slice(0, 3).forEach(q => {
+          list.push({ ...q, lakshmiId: def.id, lakshmiName: def.sanskritName, emoji: def.emoji, color: def.colorName });
+        });
+      } else {
+        // Deep clinical (sub-facets)
+        (def.subFacets || []).forEach((sf, idx) => {
+          list.push({
+            id: `${def.id}_sf_${idx}`,
+            text: `Facet: ${sf.name} — ${sf.desc}`,
+            score: sf.score || 70,
+            lakshmiId: def.id,
+            lakshmiName: def.sanskritName,
+            emoji: def.emoji,
+            color: def.colorName
+          });
+        });
+      }
+    });
+    return list;
+  }, [assessmentDepth, lakshmiState]);
+
+  const filteredQuestions = useMemo(() => {
+    if (activeCategory === 'all') return questionsToRender;
+    return questionsToRender.filter(q => q.lakshmiId === activeCategory);
+  }, [questionsToRender, activeCategory]);
+
+  const handleLikertSelect = (lakshmiId, questionId, scoreVal) => {
+    const current = lakshmiState[lakshmiId] || INITIAL_LAKSHMI_DATA.find(l => l.id === lakshmiId);
+    const updatedQuestions = (current.questions || []).map(q => {
+      if (q.id === questionId) {
+        return { ...q, score: scoreVal };
       }
       return q;
     });
 
     onUpdateLakshmi({
-      ...lakshmi,
+      ...current,
       questions: updatedQuestions
     });
   };
 
-  const handleAddQuestion = (lakshmiId) => {
-    const text = (newQuestionTexts[lakshmiId] || '').trim();
-    if (!text) return;
-
-    const lakshmi = lakshmiState[lakshmiId] || INITIAL_LAKSHMI_DATA.find(l => l.id === lakshmiId);
-    const newQ = {
-      id: `${lakshmiId}_q_custom_${Date.now()}`,
-      text,
-      score: 80,
-      weight: 3,
-      isCustom: true
-    };
-
-    onUpdateLakshmi({
-      ...lakshmi,
-      questions: [...(lakshmi.questions || []), newQ]
-    });
-
-    setNewQuestionTexts(prev => ({ ...prev, [lakshmiId]: '' }));
-  };
-
-  const handleDeleteQuestion = (lakshmiId, qId) => {
-    const lakshmi = lakshmiState[lakshmiId] || INITIAL_LAKSHMI_DATA.find(l => l.id === lakshmiId);
-    onUpdateLakshmi({
-      ...lakshmi,
-      questions: (lakshmi.questions || []).filter(q => q.id !== qId)
-    });
+  const handleSubmitAudit = () => {
+    if (!isAuthenticated) {
+      setShowGuestModal(true);
+    } else {
+      onNavigate('radar');
+    }
   };
 
   return (
-    <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto', color: '#F8FAFC' }}>
+    <div className="max-w-5xl mx-auto space-y-6 p-6 lg:p-8">
       {/* Top Banner */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(99, 102, 241, 0.15) 100%)',
-        border: '1px solid rgba(245, 158, 11, 0.3)',
-        borderRadius: '20px',
-        padding: '28px 32px',
-        marginBottom: '28px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '20px'
-      }}>
-        <div style={{ maxWidth: '750px' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: 'rgba(245, 158, 11, 0.2)',
-            border: '1px solid rgba(245, 158, 11, 0.4)',
-            padding: '4px 12px',
-            borderRadius: '20px',
-            fontSize: '11px',
-            fontWeight: 800,
-            color: '#FBBF24',
-            marginBottom: '10px'
-          }}>
-            <Sparkles size={13} />
-            SELF-ASSESSMENT QUESTIONNAIRE
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-900/60 border border-slate-800 p-6 rounded-2xl">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-extrabold text-white tracking-tight">
+              Psychometric Likert Life Audit
+            </h2>
+            <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              📝 Page 3: Behavioral Likert Engine
+            </span>
           </div>
-          <h1 style={{ fontSize: '26px', fontWeight: 900, color: 'white', margin: '0 0 8px 0', fontFamily: "'Cinzel', serif" }}>
-            Vedic Questionnaire (8 Lakshmis)
-          </h1>
-          <p style={{ fontSize: '13.5px', color: '#94A3B8', lineHeight: 1.5, margin: 0 }}>
-            Reflect on and evaluate your personal alignment across the 8 wealth dimensions. Expand any Lakshmi accordion below to answer questions and adjust rating sliders.
+          <p className="text-xs text-slate-400 mt-1">
+            Anchored behavioral frequencies replace raw, subjective number sliders. Evaluates the 8 Vedic prosperity dimensions.
           </p>
         </div>
 
-        {/* Global Score Pill */}
-        <div style={{
-          backgroundColor: '#0F172A',
-          border: `1px solid ${harmonyRange.borderColor}`,
-          borderRadius: '16px',
-          padding: '16px 24px',
-          textAlign: 'center',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
-        }}>
-          <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>
-            Questionnaire Score
-          </span>
-          <div style={{ fontSize: '32px', fontWeight: 900, color: harmonyRange.color, margin: '2px 0' }}>
-            {harmonyIndex}<span style={{ fontSize: '16px', color: '#64748B' }}>/100</span>
+        {/* 3-Tier Depth Switcher */}
+        <div className="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800 text-xs shrink-0">
+          <button
+            onClick={() => setAssessmentDepth('quick')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
+              assessmentDepth === 'quick'
+                ? 'bg-indigo-600 text-white shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            ⚡ Quick Pulse (3m)
+          </button>
+          <button
+            onClick={() => setAssessmentDepth('standard')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
+              assessmentDepth === 'standard'
+                ? 'bg-indigo-600 text-white shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            📋 Standard (10m)
+          </button>
+          <button
+            onClick={() => setAssessmentDepth('deep')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
+              assessmentDepth === 'deep'
+                ? 'bg-indigo-600 text-white shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            🔬 Deep Clinical (25m)
+          </button>
+        </div>
+      </div>
+
+      {/* Progress & Live Recalibration Bar */}
+      <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+        <div className="flex-1 w-full space-y-1.5">
+          <div className="flex items-center justify-between text-slate-400 text-[11px]">
+            <span>
+              Assessment Depth: <strong className="text-white capitalize">{assessmentDepth}</strong> ({questionsToRender.length} Questions)
+            </span>
+            <span className="text-emerald-400 font-bold">
+              Harmonic Index: {harmonicIndex}%
+            </span>
           </div>
-          <span style={{
-            fontSize: '11px',
-            fontWeight: 800,
-            padding: '3px 8px',
-            borderRadius: '6px',
-            backgroundColor: `${harmonyRange.color}20`,
-            color: harmonyRange.color
-          }}>
-            {harmonyRange.label}
-          </span>
+          <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-indigo-500 to-emerald-400 h-full rounded-full transition-all"
+              style={{ width: `${Math.min(100, Math.max(25, harmonicIndex))}%` }}
+            ></div>
+          </div>
         </div>
+        <button
+          onClick={handleSubmitAudit}
+          className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-lg text-xs shrink-0 transition shadow-md cursor-pointer flex items-center gap-1.5"
+        >
+          <span>Submit & View Radar</span>
+          <span>➔</span>
+        </button>
       </div>
 
-      {/* Global Control Bar */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: '#1E293B',
-        border: '1px solid #334155',
-        borderRadius: '16px',
-        padding: '14px 20px',
-        marginBottom: '24px',
-        flexWrap: 'wrap',
-        gap: '14px'
-      }}>
-        {/* Search Bar */}
-        <div style={{ position: 'relative', minWidth: '300px' }}>
-          <Search size={15} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '10px' }} />
-          <input
-            type="text"
-            placeholder="Search questions across all 8 Lakshmis..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px 12px 8px 36px',
-              borderRadius: '10px',
-              backgroundColor: '#0F172A',
-              border: '1px solid #334155',
-              color: '#F8FAFC',
-              fontSize: '13px',
-              outline: 'none'
-            }}
-          />
-        </div>
-
-        {/* Global Expand / Collapse All Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 600, marginRight: '4px' }}>
-            {totalQuestions} Questions across 8 Pillars
-          </span>
+      {/* Category Pills Filter */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+        <button
+          onClick={() => setActiveCategory('all')}
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition cursor-pointer font-medium ${
+            activeCategory === 'all'
+              ? 'bg-slate-700 text-white font-bold'
+              : 'bg-slate-900/60 text-slate-400 hover:text-white border border-slate-800'
+          }`}
+        >
+          All Dimensions ({questionsToRender.length})
+        </button>
+        {INITIAL_LAKSHMI_DATA.map(l => (
           <button
-            onClick={handleExpandAll}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '8px',
-              border: '1px solid #475569',
-              backgroundColor: '#0F172A',
-              color: '#CBD5E1',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
+            key={l.id}
+            onClick={() => setActiveCategory(l.id)}
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
+              activeCategory === l.id
+                ? 'bg-indigo-600/30 text-indigo-300 font-bold border border-indigo-500/40'
+                : 'bg-slate-900/60 text-slate-400 hover:text-white border border-slate-800'
+            }`}
           >
-            Expand All
+            <span>{l.emoji}</span>
+            <span>{l.sanskritName.split(' ')[0]}</span>
+            <span className="text-[10px] text-slate-500 font-mono">
+              ({dimensionScores[l.id]}%)
+            </span>
           </button>
-          <button
-            onClick={handleCollapseAll}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '8px',
-              border: '1px solid #475569',
-              backgroundColor: '#0F172A',
-              color: '#CBD5E1',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
-          >
-            Collapse All
-          </button>
-        </div>
+        ))}
       </div>
 
-      {/* 8 Accordions Container */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {computedList.map((lakshmi) => {
-          const Icon = lakshmi.icon;
-          const isExpanded = !!expandedMap[lakshmi.id];
-          const questions = lakshmi.questions || [];
-
-          // Filter questions by search query
-          const displayedQuestions = searchQuery.trim()
-            ? questions.filter(q => q.text.toLowerCase().includes(searchQuery.toLowerCase()))
-            : questions;
-
-          if (searchQuery.trim() && displayedQuestions.length === 0) {
-            return null;
-          }
-
+      {/* Questions List */}
+      <div className="space-y-4">
+        {filteredQuestions.map((q, qIndex) => {
+          const currentScore = Number(q.score) || 60;
           return (
             <div
-              key={lakshmi.id}
-              id={`accordion-${lakshmi.id}`}
-              style={{
-                backgroundColor: '#1E293B',
-                border: `1px solid ${isExpanded ? lakshmi.accentColor : '#334155'}`,
-                borderRadius: '16px',
-                overflow: 'hidden',
-                transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-                boxShadow: isExpanded ? `0 6px 20px ${lakshmi.accentColor}20` : 'none'
-              }}
+              key={q.id}
+              className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl space-y-3"
             >
-              {/* Accordion Trigger Header */}
-              <div
-                onClick={() => toggleAccordion(lakshmi.id)}
-                style={{
-                  padding: '18px 24px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  backgroundColor: isExpanded ? 'rgba(15, 23, 42, 0.6)' : '#1E293B',
-                  borderBottom: isExpanded ? '1px solid #334155' : 'none',
-                  userSelect: 'none'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '12px',
-                    backgroundColor: `${lakshmi.accentColor}20`,
-                    border: `1px solid ${lakshmi.accentColor}50`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: lakshmi.accentColor
-                  }}>
-                    <Icon size={22} />
-                  </div>
-
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <h2 style={{ fontSize: '18px', fontWeight: 900, color: 'white', margin: 0 }}>
-                        {lakshmi.sanskritName}
-                      </h2>
-                      <span style={{ fontSize: '12.5px', color: '#94A3B8', fontWeight: 600 }}>
-                        • {lakshmi.englishTitle}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '12px', color: '#64748B' }}>
-                      {lakshmi.description}
-                    </span>
-                  </div>
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{q.emoji}</span>
+                  <span className="text-xs font-bold text-slate-200">
+                    {q.lakshmiName}
+                  </span>
                 </div>
-
-                {/* Score Pill & Toggle Chevron */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '18px', fontWeight: 900, color: lakshmi.range.color }}>
-                      {lakshmi.calculatedScore}
-                      <span style={{ fontSize: '12px', color: '#64748B' }}>/100</span>
-                    </div>
-                    <span style={{
-                      fontSize: '10.5px',
-                      fontWeight: 800,
-                      color: lakshmi.range.color,
-                      backgroundColor: `${lakshmi.range.color}15`,
-                      padding: '2px 8px',
-                      borderRadius: '6px'
-                    }}>
-                      {lakshmi.range.label} ({questions.length} Qs)
-                    </span>
-                  </div>
-
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    backgroundColor: '#0F172A',
-                    border: '1px solid #334155',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: isExpanded ? lakshmi.accentColor : '#94A3B8'
-                  }}>
-                    {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                  </div>
-                </div>
+                <span className="text-[11px] font-mono text-slate-400">
+                  Current: <strong className="text-amber-400">{currentScore}%</strong>
+                </span>
               </div>
 
-              {/* Accordion Expanded Content: QUESTIONS ONLY */}
-              {isExpanded && (
-                <div style={{ padding: '24px' }}>
-                  {/* Questions List */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
-                    {displayedQuestions.map((q, qIndex) => (
-                      <div
-                        key={q.id}
-                        style={{
-                          backgroundColor: '#0F172A',
-                          borderRadius: '12px',
-                          padding: '18px 20px',
-                          border: '1px solid #334155'
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                            <span style={{
-                              backgroundColor: `${lakshmi.accentColor}25`,
-                              color: lakshmi.accentColor,
-                              fontWeight: 900,
-                              fontSize: '11px',
-                              padding: '2px 8px',
-                              borderRadius: '6px',
-                              marginTop: '2px'
-                            }}>
-                              Q{qIndex + 1}
-                            </span>
-                            <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 700, color: '#F8FAFC', lineHeight: 1.4 }}>
-                              {q.text}
-                            </p>
-                          </div>
+              <div className="text-xs font-semibold text-white leading-relaxed">
+                {q.text}
+              </div>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>
-                              Weight: {q.weight || 1}x
-                            </span>
-                            {q.isCustom && (
-                              <button
-                                onClick={() => handleDeleteQuestion(lakshmi.id, q.id)}
-                                title="Remove question"
-                                style={{ background: 'none', border: 'none', color: '#F87171', cursor: 'pointer', padding: 0 }}
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
+              {/* Anchored 5-Point Likert Options */}
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 pt-1">
+                {LIKERT_ANCHORS.map((anchor) => {
+                  const isSelected = currentScore === anchor.value;
+                  const borderCol =
+                    anchor.value <= 20
+                      ? 'border-rose-500 bg-rose-950/40 text-rose-300'
+                      : anchor.value <= 40
+                      ? 'border-orange-500 bg-orange-950/40 text-orange-300'
+                      : anchor.value <= 60
+                      ? 'border-amber-500 bg-amber-950/40 text-amber-300'
+                      : anchor.value <= 80
+                      ? 'border-blue-500 bg-blue-950/40 text-blue-300'
+                      : 'border-emerald-500 bg-emerald-950/40 text-emerald-300';
 
-                        {/* Interactive Slider & Quick Value Pills */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                          <input
-                            type="range"
-                            min="1"
-                            max="100"
-                            value={q.score || 50}
-                            onChange={(e) => handleScoreChange(lakshmi.id, q.id, e.target.value)}
-                            style={{
-                              flex: 1,
-                              accentColor: lakshmi.accentColor,
-                              cursor: 'pointer'
-                            }}
-                          />
-
-                          {/* Quick Value Pills */}
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            {[25, 50, 75, 100].map(val => (
-                              <button
-                                key={val}
-                                onClick={() => handleScoreChange(lakshmi.id, q.id, val)}
-                                style={{
-                                  padding: '2px 8px',
-                                  borderRadius: '6px',
-                                  border: '1px solid #334155',
-                                  backgroundColor: q.score === val ? `${lakshmi.accentColor}30` : '#1E293B',
-                                  color: q.score === val ? lakshmi.accentColor : '#94A3B8',
-                                  fontSize: '10.5px',
-                                  fontWeight: 700,
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                {val}
-                              </button>
-                            ))}
-                          </div>
-
-                          {/* Current Rating Indicator */}
-                          <div style={{
-                            minWidth: '55px',
-                            textAlign: 'right',
-                            fontSize: '15px',
-                            fontWeight: 900,
-                            color: lakshmi.accentColor
-                          }}>
-                            {q.score || 50}%
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Add Custom Question Form */}
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <input
-                      type="text"
-                      placeholder={`Add a custom reflection question for ${lakshmi.sanskritName}...`}
-                      value={newQuestionTexts[lakshmi.id] || ''}
-                      onChange={(e) => setNewQuestionTexts({ ...newQuestionTexts, [lakshmi.id]: e.target.value })}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleAddQuestion(lakshmi.id); }}
-                      style={{
-                        flex: 1,
-                        backgroundColor: '#0F172A',
-                        border: '1px solid #334155',
-                        borderRadius: '10px',
-                        padding: '8px 14px',
-                        color: '#F8FAFC',
-                        fontSize: '13px',
-                        outline: 'none'
-                      }}
-                    />
+                  return (
                     <button
-                      onClick={() => handleAddQuestion(lakshmi.id)}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: '10px',
-                        border: 'none',
-                        backgroundColor: lakshmi.accentColor,
-                        color: 'white',
-                        fontWeight: 800,
-                        fontSize: '12.5px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
+                      key={anchor.value}
+                      onClick={() => handleLikertSelect(q.lakshmiId, q.id, anchor.value)}
+                      className={`p-2.5 rounded-xl text-left transition cursor-pointer border ${
+                        isSelected
+                          ? `border-2 ${borderCol} shadow-sm`
+                          : 'border-slate-800 bg-slate-950 hover:border-slate-700 text-slate-400'
+                      }`}
                     >
-                      <Plus size={14} />
-                      Add Question
+                      <div className="text-[10px] font-bold">
+                        {anchor.label} {isSelected && '✓'}
+                      </div>
+                      <div className="text-[9px] text-slate-400 mt-0.5 leading-snug">
+                        {anchor.desc}
+                      </div>
                     </button>
-                  </div>
-                </div>
-              )}
+                  );
+                })}
+              </div>
             </div>
           );
         })}
       </div>
+
+      {/* Assessment Submission Action Callout */}
+      <div className="bg-gradient-to-r from-indigo-950/60 via-slate-900 to-purple-950/60 border border-indigo-500/40 p-6 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+        <div>
+          <div className="text-xs font-bold uppercase tracking-wider text-indigo-300">
+            Ready to Compute Harmonic Balance
+          </div>
+          <h3 className="text-base font-bold text-white mt-0.5">
+            Submit Assessment & Reveal Diagnostic Results
+          </h3>
+          <p className="text-xs text-slate-300 mt-1 max-w-md leading-relaxed">
+            Computes your Harmonic Index (currently {harmonicIndex}%), identifies systemic bottlenecks ({bottleneck.name} {bottleneck.score}%), and classifies your authentic Vedic Life Archetype.
+          </p>
+        </div>
+        <button
+          onClick={handleSubmitAudit}
+          className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-black px-6 py-3 rounded-xl shadow-lg shadow-emerald-500/20 transition flex items-center gap-2 shrink-0 cursor-pointer"
+        >
+          <span>🚀 Submit & Reveal Scores</span>
+        </button>
+      </div>
+
+      {/* Guest Assessment Completion Conversion Modal */}
+      {showGuestModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0F172A] border border-amber-500/40 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+            <div className="p-6 bg-gradient-to-r from-amber-950/60 to-slate-900 border-b border-slate-800 text-center relative">
+              <button
+                onClick={() => setShowGuestModal(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white text-lg font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">
+                🎉
+              </div>
+              <div className="text-[10px] uppercase font-bold tracking-widest text-amber-400">
+                Assessment Completed
+              </div>
+              <h3 className="text-xl font-black text-white mt-1">
+                Your Life-Harmony Archetype is Ready!
+              </h3>
+            </div>
+
+            <div className="p-6 space-y-4 text-center">
+              {/* Snapshot */}
+              <div className="grid grid-cols-3 gap-2 bg-slate-950/80 p-4 rounded-2xl border border-slate-800 text-center">
+                <div>
+                  <div className="text-[10px] text-slate-400 font-semibold uppercase">
+                    Harmonic Index
+                  </div>
+                  <div className="text-base font-extrabold text-amber-300 mt-0.5">
+                    {harmonicIndex}%
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-400 font-semibold uppercase">
+                    Archetype
+                  </div>
+                  <div className="text-xs font-bold text-violet-300 mt-0.5 truncate">
+                    {archetype.title.split(' ')[1] || 'Raja-Rishi'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-400 font-semibold uppercase">
+                    Bottleneck
+                  </div>
+                  <div className="text-base font-extrabold text-rose-400 mt-0.5">
+                    {bottleneck.name} ({bottleneck.score}%)
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-indigo-950/30 border border-indigo-500/30 p-4 rounded-xl text-left text-xs space-y-2">
+                <div className="font-bold text-indigo-300 flex items-center gap-2">
+                  <span>🔒</span>
+                  <span>Sign In to Unlock Full Diagnostic Suite</span>
+                </div>
+                <p className="text-slate-300 leading-relaxed text-[11px]">
+                  Sign in with Keycloak to save your assessment, unlock your interactive <strong>8-Spoke Mandala Radar</strong>, companion app <strong>Empirical Telemetry feeds</strong>, and your customized <strong>14-Day Sadhana Recalibration Protocol</strong>.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <button
+                  onClick={() => {
+                    setShowGuestModal(false);
+                    if (keycloak) {
+                      keycloak.login({ redirectUri: window.location.origin + '/' });
+                    }
+                  }}
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs py-3 rounded-xl shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>👤 Sign In with Keycloak SSO</span>
+                  <span>➔</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowGuestModal(false);
+                    onNavigate('overview');
+                  }}
+                  className="w-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs py-2.5 rounded-xl border border-slate-700 transition cursor-pointer"
+                >
+                  Continue Exploring Public Overview
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

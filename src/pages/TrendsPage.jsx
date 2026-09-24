@@ -1,464 +1,460 @@
 import React, { useState } from 'react';
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis
-} from 'recharts';
-import {
   TrendingUp,
-  TrendingDown,
-  ArrowUpRight,
-  ArrowDownRight,
+  ArrowRight,
   Sparkles,
   Calendar,
   Layers,
-  ArrowRight,
-  ShieldAlert,
-  Award
+  Award,
+  Zap,
+  RotateCcw
 } from 'lucide-react';
 import {
   INITIAL_LAKSHMI_DATA,
-  SUPPORTED_YEARS,
-  getFinalLakshmiScore,
-  calculateYoYDeltas,
-  getScoreRangeConfig
+  MULTI_YEAR_LONGITUDINAL_DATA
 } from '../data/lakshmiData';
 
-export function TrendsPage({ multiYearState, selectedYear, setSelectedYear, onSelectTab }) {
-  const [selectedLines, setSelectedLines] = useState(() => {
-    const init = {};
-    INITIAL_LAKSHMI_DATA.forEach(d => { init[d.id] = true; });
-    return init;
-  });
+export function TrendsPage({ onNavigate, onSelectLakshmi }) {
+  const [activeStreamMode, setActiveStreamMode] = useState('both'); // 'both', 'blended', 'psychometric', 'empirical'
 
-  const [compareBaseYear, setCompareBaseYear] = useState('2023');
-  const [compareTargetYear, setCompareTargetYear] = useState('2026');
-
-  // Generate longitudinal timeline dataset
-  const timelineData = SUPPORTED_YEARS.map(yr => {
-    const yearObj = { year: yr };
-    const yearMap = multiYearState[yr] || {};
-
-    let total = 0;
-    INITIAL_LAKSHMI_DATA.forEach(def => {
-      const lakshmi = yearMap[def.id] || def;
-      const score = getFinalLakshmiScore(lakshmi);
-      yearObj[def.id] = score;
-      total += score;
-    });
-
-    yearObj.average = Math.round(total / INITIAL_LAKSHMI_DATA.length);
-    return yearObj;
-  });
-
-  // Calculate Deltas for currently selected year vs its previous year
-  const prevYearIdx = SUPPORTED_YEARS.indexOf(selectedYear) - 1;
-  const previousYear = prevYearIdx >= 0 ? SUPPORTED_YEARS[prevYearIdx] : SUPPORTED_YEARS[0];
-  const deltaAnalytics = calculateYoYDeltas(multiYearState, selectedYear, previousYear);
-
-  // Dual Radar Comparison Dataset
-  const baseMap = multiYearState[compareBaseYear] || {};
-  const targetMap = multiYearState[compareTargetYear] || {};
-
-  const dualRadarData = INITIAL_LAKSHMI_DATA.map(def => {
-    const baseLakshmi = baseMap[def.id] || def;
-    const targetLakshmi = targetMap[def.id] || def;
-    return {
-      subject: def.sanskritName,
-      [compareBaseYear]: getFinalLakshmiScore(baseLakshmi),
-      [compareTargetYear]: getFinalLakshmiScore(targetLakshmi),
-      fullMark: 100
-    };
-  });
-
-  const toggleLine = (id) => {
-    setSelectedLines(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const selectAllLines = () => {
-    const all = {};
-    INITIAL_LAKSHMI_DATA.forEach(d => { all[d.id] = true; });
-    setSelectedLines(all);
-  };
-
-  const clearAllLines = () => {
-    setSelectedLines({});
-  };
+  const showPsychometric = activeStreamMode === 'both' || activeStreamMode === 'psychometric';
+  const showEmpirical = activeStreamMode === 'both' || activeStreamMode === 'empirical';
+  const showBlended = activeStreamMode === 'both' || activeStreamMode === 'blended';
+  const showConvergence = activeStreamMode === 'both';
 
   return (
-    <div style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto' }}>
-      {/* Top Banner */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(245, 158, 11, 0.12) 100%)',
-        border: '1px solid rgba(99, 102, 241, 0.3)',
-        borderRadius: '16px',
-        padding: '26px 32px',
-        marginBottom: '28px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '20px'
-      }}>
-        <div style={{ maxWidth: '750px' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: 'rgba(99, 102, 241, 0.2)',
-            border: '1px solid rgba(99, 102, 241, 0.4)',
-            padding: '4px 12px',
-            borderRadius: '20px',
-            fontSize: '11px',
-            fontWeight: 800,
-            color: '#818CF8',
-            marginBottom: '10px'
-          }}>
-            <TrendingUp size={13} />
-            LONGITUDINAL VEDIC WEALTH VELOCITY & HISTORICAL TRAJECTORY
-          </div>
-          <h1 style={{ fontSize: '26px', fontWeight: 900, color: '#F8FAFC', margin: '0 0 8px 0' }}>
-            Multi-Year Trends & Gain/Loss Analysis
-          </h1>
-          <p style={{ fontSize: '13.5px', color: '#94A3B8', lineHeight: 1.5, margin: 0 }}>
-            Track whether your 8 dimensions of Vedic wealth are expanding or contracting over time. Compare historical years, identify surging strengths, and catch areas requiring immediate attention.
-          </p>
-        </div>
-
-        {/* Year Comparison Picker */}
-        <div style={{
-          background: '#1E293B',
-          border: '1px solid #334155',
-          borderRadius: '12px',
-          padding: '14px 18px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px'
-        }}>
-          <span style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase' }}>
-            Active Assessment Year
-          </span>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {SUPPORTED_YEARS.map(yr => (
-              <button
-                key={yr}
-                onClick={() => setSelectedYear(yr)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '8px',
-                  border: selectedYear === yr ? '2px solid #F59E0B' : '1px solid #334155',
-                  backgroundColor: selectedYear === yr ? '#F59E0B' : '#0F172A',
-                  color: selectedYear === yr ? '#0F172A' : '#CBD5E1',
-                  fontWeight: 800,
-                  fontSize: '12.5px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s'
-                }}
-              >
-                {yr}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 3 Metric Cards: Overall Velocity, Top Gainers, Decline Warning */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '28px' }}>
-        {/* Card 1: Net Wealth Velocity */}
-        <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: '14px', padding: '22px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-            <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase' }}>
-              Wealth Velocity ({selectedYear} vs {previousYear})
-            </span>
-            <span style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '12px',
-              fontWeight: 800,
-              padding: '2px 8px',
-              borderRadius: '8px',
-              backgroundColor: deltaAnalytics.totalDelta >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-              color: deltaAnalytics.totalDelta >= 0 ? '#34D399' : '#F87171'
-            }}>
-              {deltaAnalytics.totalDelta >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-              {deltaAnalytics.totalDelta >= 0 ? `+${deltaAnalytics.totalDelta}` : deltaAnalytics.totalDelta} pts
-            </span>
-          </div>
-
-          <div style={{ fontSize: '32px', fontWeight: 900, color: '#F8FAFC', marginBottom: '4px' }}>
-            {deltaAnalytics.avgCur}/100
-          </div>
-          <div style={{ fontSize: '12px', color: '#94A3B8' }}>
-            Previous year baseline: <strong style={{ color: '#CBD5E1' }}>{deltaAnalytics.avgPrev}/100</strong>
-          </div>
-        </div>
-
-        {/* Card 2: Highest Gaining Lakshmis */}
-        <div style={{ background: '#1E293B', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '14px', padding: '22px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <TrendingUp size={16} color="#34D399" />
-            <span style={{ fontSize: '11px', color: '#34D399', fontWeight: 800, textTransform: 'uppercase' }}>
-              Top Gaining Lakshmis (Surging)
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {deltaAnalytics.gainingList.slice(0, 3).map(item => (
-              <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                <span style={{ color: '#F8FAFC', fontWeight: 600 }}>{item.sanskritName}</span>
-                <span style={{ color: '#34D399', fontWeight: 800, background: 'rgba(16, 185, 129, 0.1)', padding: '2px 6px', borderRadius: '6px' }}>
-                  +{item.delta} pts ({item.currentScore}/100)
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Card 3: Declining / Needs Focus */}
-        <div style={{ background: '#1E293B', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '14px', padding: '22px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <Sparkles size={16} color="#FBBF24" />
-            <span style={{ fontSize: '11px', color: '#FBBF24', fontWeight: 800, textTransform: 'uppercase' }}>
-              Stable & Focus Areas
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {deltaAnalytics.losingList.length > 0 ? (
-              deltaAnalytics.losingList.slice(0, 3).map(item => (
-                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                  <span style={{ color: '#F8FAFC', fontWeight: 600 }}>{item.sanskritName}</span>
-                  <span style={{ color: '#F87171', fontWeight: 800, background: 'rgba(239, 68, 68, 0.1)', padding: '2px 6px', borderRadius: '6px' }}>
-                    {item.delta} pts ({item.currentScore}/100)
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div style={{ fontSize: '12.5px', color: '#94A3B8', fontStyle: 'italic', paddingTop: '4px' }}>
-                All 8 dimensions maintained or advanced in {selectedYear}! No negative regressions detected.
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Main Multi-Line Longitudinal Timeline */}
-      <div style={{
-        background: '#1E293B',
-        border: '1px solid #334155',
-        borderRadius: '16px',
-        padding: '26px',
-        marginBottom: '28px'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#F8FAFC', margin: 0 }}>
-              Longitudinal Progression (2023 → 2026)
-            </h3>
-            <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0 }}>
-              Evolution of all 8 forms of Vedic wealth over the 4-year timeline
+    <div className="max-w-6xl mx-auto space-y-6 p-6 lg:p-8">
+      {/* Header Banner */}
+      <div className="bg-gradient-to-br from-cyan-950/50 via-slate-900 to-indigo-950/40 border border-cyan-500/30 p-6 sm:p-8 rounded-3xl shadow-xl relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+              <span>📈 Longitudinal Harmony Audit</span>
+              <span className="text-cyan-400">•</span>
+              <span>Samvatsara 2024 – 2026 Chronology</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              Multi-Year Psychometric vs. Empirical Score Trajectory
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              Track personal evolution over time by juxtaposing subjective self-reported Likert audits against objective automated companion app telemetry. Witness how personal self-awareness sharpens and blindspots collapse into grounded Vedic flourishing.
             </p>
           </div>
 
-          {/* Line Toggles */}
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            <button
-              onClick={selectAllLines}
-              style={{ background: '#0F172A', border: '1px solid #334155', color: '#94A3B8', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}
-            >
-              All
-            </button>
-            <button
-              onClick={clearAllLines}
-              style={{ background: '#0F172A', border: '1px solid #334155', color: '#94A3B8', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-
-        {/* Series Pill Filter */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
-          {INITIAL_LAKSHMI_DATA.map(item => {
-            const isVisible = !!selectedLines[item.id];
-            return (
+          {/* Time Horizon & Layer Filter Controls */}
+          <div className="flex flex-col gap-2.5 w-full lg:w-auto bg-slate-950/90 border border-slate-800 p-4 rounded-2xl shrink-0">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+              Stream Visibility Layers
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
               <button
-                key={item.id}
-                onClick={() => toggleLine(item.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '5px 12px',
-                  borderRadius: '20px',
-                  border: isVisible ? `1px solid ${item.accentColor}` : '1px solid #334155',
-                  backgroundColor: isVisible ? `${item.accentColor}20` : '#0F172A',
-                  color: isVisible ? '#F8FAFC' : '#64748B',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s'
-                }}
+                onClick={() => setActiveStreamMode('both')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition text-center cursor-pointer ${
+                  activeStreamMode === 'both'
+                    ? 'bg-cyan-600 text-white shadow'
+                    : 'text-slate-400 hover:text-white bg-slate-900 border border-slate-800'
+                }`}
               >
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: item.accentColor }} />
-                <span>{item.sanskritName}</span>
+                Dual Stream (Both)
               </button>
-            );
-          })}
-        </div>
-
-        {/* Line Chart */}
-        <div style={{ height: '380px', width: '100%' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={timelineData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-              <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
-              <XAxis dataKey="year" stroke="#94A3B8" tick={{ fill: '#CBD5E1', fontSize: 12, fontWeight: 700 }} />
-              <YAxis domain={[40, 100]} stroke="#94A3B8" tick={{ fill: '#CBD5E1', fontSize: 11 }} />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '8px', color: '#F8FAFC' }}
-              />
-              <Legend />
-              {INITIAL_LAKSHMI_DATA.map(item => {
-                if (!selectedLines[item.id]) return null;
-                return (
-                  <Line
-                    key={item.id}
-                    type="monotone"
-                    dataKey={item.id}
-                    name={item.sanskritName}
-                    stroke={item.accentColor}
-                    strokeWidth={2.5}
-                    dot={{ r: 4, fill: item.accentColor }}
-                    activeDot={{ r: 6 }}
-                  />
-                );
-              })}
-            </LineChart>
-          </ResponsiveContainer>
+              <button
+                onClick={() => setActiveStreamMode('blended')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition text-center cursor-pointer ${
+                  activeStreamMode === 'blended'
+                    ? 'bg-cyan-600 text-white shadow'
+                    : 'text-slate-400 hover:text-white bg-slate-900 border border-slate-800'
+                }`}
+              >
+                Blended Score
+              </button>
+              <button
+                onClick={() => setActiveStreamMode('psychometric')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition text-center cursor-pointer ${
+                  activeStreamMode === 'psychometric'
+                    ? 'bg-cyan-600 text-white shadow'
+                    : 'text-slate-400 hover:text-white bg-slate-900 border border-slate-800'
+                }`}
+              >
+                Psychometric (Likert)
+              </button>
+              <button
+                onClick={() => setActiveStreamMode('empirical')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition text-center cursor-pointer ${
+                  activeStreamMode === 'empirical'
+                    ? 'bg-cyan-600 text-white shadow'
+                    : 'text-slate-400 hover:text-white bg-slate-900 border border-slate-800'
+                }`}
+              >
+                Empirical (Apps)
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Dual Radar Wheel Comparison + Breakdown Table Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr', gap: '24px', marginBottom: '32px' }}>
-        {/* Dual Radar Chart */}
-        <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: '16px', padding: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <div>
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#F8FAFC', margin: 0 }}>
-                Dual-Year Wheel Overlay
-              </h3>
-              <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0 }}>
-                Direct visual comparison of wheel expansion
-              </p>
-            </div>
-
-            {/* Selectors for comparison */}
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <select
-                value={compareBaseYear}
-                onChange={(e) => setCompareBaseYear(e.target.value)}
-                style={{ background: '#0F172A', color: '#94A3B8', border: '1px solid #334155', borderRadius: '6px', padding: '4px 8px', fontSize: '11.5px' }}
-              >
-                {SUPPORTED_YEARS.map(y => <option key={y} value={y}>Base: {y}</option>)}
-              </select>
-              <select
-                value={compareTargetYear}
-                onChange={(e) => setCompareTargetYear(e.target.value)}
-                style={{ background: '#0F172A', color: '#FBBF24', border: '1px solid #F59E0B', borderRadius: '6px', padding: '4px 8px', fontSize: '11.5px', fontWeight: 700 }}
-              >
-                {SUPPORTED_YEARS.map(y => <option key={y} value={y}>Compare: {y}</option>)}
-              </select>
-            </div>
+      {/* 4 Top Executive KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* KPI 1 */}
+        <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl space-y-2">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Harmonic Index Arc</span>
+            <span className="text-xs text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">
+              +10.2% ▲
+            </span>
           </div>
-
-          <div style={{ height: '340px', width: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={dualRadarData}>
-                <PolarGrid stroke="#334155" />
-                <PolarAngleAxis dataKey="subject" stroke="#94A3B8" tick={{ fill: '#CBD5E1', fontSize: 10, fontWeight: 700 }} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#475569" tick={{ fill: '#64748B', fontSize: 9 }} />
-                <Radar name={compareBaseYear} dataKey={compareBaseYear} stroke="#64748B" fill="#64748B" fillOpacity={0.25} />
-                <Radar name={compareTargetYear} dataKey={compareTargetYear} stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.45} />
-                <Legend />
-                <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', color: '#F8FAFC' }} />
-              </RadarChart>
-            </ResponsiveContainer>
+          <div className="text-2xl font-black text-white">
+            58.2% <span className="text-xs text-slate-500 font-normal">➔</span> 68.4%
+          </div>
+          <div className="text-[11px] text-slate-400">
+            Continuous systemic compounding across 8 spokes since 2024 baseline.
           </div>
         </div>
 
-        {/* Detailed Table */}
-        <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: '16px', padding: '24px', overflowX: 'auto' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#F8FAFC', marginBottom: '4px' }}>
-            Multi-Year Score Progression Matrix
-          </h3>
-          <p style={{ fontSize: '12px', color: '#94A3B8', marginBottom: '16px' }}>
-            Yearly evolution and net delta per Lakshmi
-          </p>
+        {/* KPI 2 */}
+        <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl space-y-2">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Blindspot Delta (Δ)</span>
+            <span className="text-xs text-cyan-400 font-bold bg-cyan-500/10 px-2 py-0.5 rounded">
+              75% Calibrated
+            </span>
+          </div>
+          <div className="text-2xl font-black text-cyan-300">
+            -18.4% <span className="text-xs text-slate-500 font-normal">➔</span> -4.6%
+          </div>
+          <div className="text-[11px] text-slate-400">
+            Wishful self-perception collapsed into objective empirical ground-truth.
+          </div>
+        </div>
 
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+        {/* KPI 3 */}
+        <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl space-y-2">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Top Breakthrough Spoke</span>
+            <span className="text-xs text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded">
+              +23.0% 🚀
+            </span>
+          </div>
+          <div className="text-2xl font-black text-amber-300 flex items-center gap-2">
+            <span>🏆 Vijaya</span>
+            <span className="text-sm font-semibold text-slate-400">(48% ➔ 71%)</span>
+          </div>
+          <div className="text-[11px] text-slate-400">
+            Sprint execution habits & daily OKR momentum eliminated goal drift.
+          </div>
+        </div>
+
+        {/* KPI 4 */}
+        <div className="bg-slate-900/80 border border-rose-500/30 bg-rose-950/10 p-5 rounded-2xl space-y-2">
+          <div className="flex items-center justify-between text-xs text-rose-400">
+            <span>Persistent Bottleneck</span>
+            <span className="text-xs text-rose-300 font-bold bg-rose-500/20 px-2 py-0.5 rounded">
+              Critical Drag
+            </span>
+          </div>
+          <div className="text-2xl font-black text-rose-400 flex items-center gap-2">
+            <span>🌿 Dhanya</span>
+            <span className="text-sm font-semibold text-slate-400">(38% ➔ 34%)</span>
+          </div>
+          <div className="text-[11px] text-rose-300/80">
+            Chronic sleep deficit and circadian strain capping overall harmonic potential.
+          </div>
+        </div>
+      </div>
+
+      {/* Visual Multi-Year Trajectory Chart */}
+      <div className="bg-slate-900/80 border border-slate-800 p-6 rounded-2xl space-y-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <span>📈</span> Multi-Year Harmonic Evolution: Psychometric vs. Empirical Convergence
+            </h3>
+            <p className="text-xs text-slate-400">
+              Longitudinal score curves spanning Samvatsara 2024 (Baseline), 2025 (Midpoint), and 2026 (Present).
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4 text-xs font-mono">
+            <div className="flex items-center gap-1.5 text-emerald-400">
+              <span className="w-3 h-0.5 bg-emerald-400"></span>
+              <span>Psychometric (Likert)</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-purple-400">
+              <span className="w-3 h-0.5 bg-purple-400"></span>
+              <span>Empirical (Telemetry)</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-amber-400">
+              <span className="w-3 h-0.5 bg-amber-400 border border-dashed"></span>
+              <span>Blended Index</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Interactive SVG Trajectory Chart */}
+        <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800">
+          <svg viewBox="0 0 800 280" className="w-full h-auto overflow-visible select-none">
+            <defs>
+              <linearGradient id="convergenceGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#10B981" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="#A855F7" stopOpacity="0.05" />
+              </linearGradient>
+            </defs>
+
+            {/* Grid horizontal lines */}
+            <line x1="80" y1="40" x2="750" y2="40" stroke="#334155" strokeDasharray="3,3" opacity="0.4" />
+            <text x="65" y="44" fill="#64748B" fontSize="10" textAnchor="end" fontFamily="monospace">100%</text>
+
+            <line x1="80" y1="90" x2="750" y2="90" stroke="#334155" strokeDasharray="3,3" opacity="0.4" />
+            <text x="65" y="94" fill="#64748B" fontSize="10" textAnchor="end" fontFamily="monospace">75%</text>
+
+            <line x1="80" y1="140" x2="750" y2="140" stroke="#334155" strokeDasharray="3,3" opacity="0.4" />
+            <text x="65" y="144" fill="#64748B" fontSize="10" textAnchor="end" fontFamily="monospace">50%</text>
+
+            <line x1="80" y1="190" x2="750" y2="190" stroke="#334155" strokeDasharray="3,3" opacity="0.4" />
+            <text x="65" y="194" fill="#64748B" fontSize="10" textAnchor="end" fontFamily="monospace">25%</text>
+
+            <line x1="80" y1="240" x2="750" y2="240" stroke="#475569" strokeWidth="1.5" />
+            <text x="65" y="244" fill="#64748B" fontSize="10" textAnchor="end" fontFamily="monospace">0%</text>
+
+            {/* Convergence Band and Callouts */}
+            {showConvergence && (
+              <g>
+                <polygon points="180,107 430,103 680,97 680,106 430,122 180,143" fill="url(#convergenceGradient)" />
+                <rect x="155" y="115" width="50" height="18" rx="4" fill="#1E293B" stroke="#475569" />
+                <text x="180" y="127" fill="#F87171" fontSize="9" fontWeight="700" textAnchor="middle" fontFamily="monospace">Δ -18.4%</text>
+                <rect x="405" y="105" width="50" height="18" rx="4" fill="#1E293B" stroke="#475569" />
+                <text x="430" y="117" fill="#FBBF24" fontSize="9" fontWeight="700" textAnchor="middle" fontFamily="monospace">Δ -9.2%</text>
+                <rect x="655" y="93" width="50" height="18" rx="4" fill="#1E293B" stroke="#10B981" />
+                <text x="680" y="105" fill="#34D399" fontSize="9" fontWeight="800" textAnchor="middle" fontFamily="monospace">Δ -4.6% ✓</text>
+              </g>
+            )}
+
+            {/* Vertical year guidelines */}
+            <line x1="180" y1="40" x2="180" y2="240" stroke="#334155" strokeDasharray="2,2" opacity="0.5" />
+            <text x="180" y="260" fill="#94A3B8" fontSize="12" fontWeight="700" textAnchor="middle">2024 (Baseline)</text>
+
+            <line x1="430" y1="40" x2="430" y2="240" stroke="#334155" strokeDasharray="2,2" opacity="0.5" />
+            <text x="430" y="260" fill="#94A3B8" fontSize="12" fontWeight="700" textAnchor="middle">2025 (Midpoint)</text>
+
+            <line x1="680" y1="40" x2="680" y2="240" stroke="#334155" strokeDasharray="2,2" opacity="0.5" />
+            <text x="680" y="260" fill="#38BDF8" fontSize="12" fontWeight="800" textAnchor="middle">2026 (Present)</text>
+
+            {/* STREAM 1: Psychometric Self-Report Line (Emerald) */}
+            {showPsychometric && (
+              <g>
+                <path d="M 180 107 L 430 103 L 680 97" fill="none" stroke="#10B981" strokeWidth="3" strokeLinecap="round" />
+                <circle cx="180" cy="107" r="5" fill="#10B981" />
+                <text x="180" y="95" fill="#6EE7B7" fontSize="11" fontWeight="700" textAnchor="middle">66.7%</text>
+
+                <circle cx="430" cy="103" r="5" fill="#10B981" />
+                <text x="430" y="91" fill="#6EE7B7" fontSize="11" fontWeight="700" textAnchor="middle">68.3%</text>
+
+                <circle cx="680" cy="97" r="6" fill="#10B981" stroke="#047857" strokeWidth="2" />
+                <text x="680" y="85" fill="#A7F3D0" fontSize="12" fontWeight="800" textAnchor="middle">71.4%</text>
+              </g>
+            )}
+
+            {/* STREAM 2: Empirical Telemetry Line (Purple) */}
+            {showEmpirical && (
+              <g>
+                <path d="M 180 143 L 430 122 L 680 106" fill="none" stroke="#A855F7" strokeWidth="3" strokeLinecap="round" />
+                <circle cx="180" cy="143" r="5" fill="#A855F7" />
+                <text x="180" y="160" fill="#D8B4FE" fontSize="11" fontWeight="700" textAnchor="middle">48.3%</text>
+
+                <circle cx="430" cy="122" r="5" fill="#A855F7" />
+                <text x="430" y="139" fill="#D8B4FE" fontSize="11" fontWeight="700" textAnchor="middle">59.1%</text>
+
+                <circle cx="680" cy="106" r="6" fill="#A855F7" stroke="#7E22CE" strokeWidth="2" />
+                <text x="680" y="123" fill="#E9D5FF" fontSize="12" fontWeight="800" textAnchor="middle">66.8%</text>
+              </g>
+            )}
+
+            {/* STREAM 3: Blended Harmonic Index Curve (Amber) */}
+            {showBlended && (
+              <g>
+                <path d="M 180 124 L 430 112 L 680 103" fill="none" stroke="#F59E0B" strokeWidth="2" strokeDasharray="4,3" strokeLinecap="round" />
+                <circle cx="180" cy="124" r="3.5" fill="#F59E0B" />
+                <circle cx="430" cy="112" r="3.5" fill="#F59E0B" />
+                <circle cx="680" cy="103" r="4.5" fill="#F59E0B" />
+              </g>
+            )}
+          </svg>
+        </div>
+      </div>
+
+      {/* 8 Dimensions Longitudinal Performance & Blindspot Convergence Table */}
+      <div className="bg-slate-900/80 border border-slate-800 p-6 rounded-2xl space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div>
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <span>📊</span> 8-Dimension Longitudinal Performance & Blindspot Convergence
+            </h3>
+            <p className="text-xs text-slate-400">
+              Comparing subjective Likert evaluations against companion app telemetry across all Samvatsaras.
+            </p>
+          </div>
+          <span className="text-xs text-slate-500 font-mono">
+            Formula: Δ = Empirical - Psychometric
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr style={{ borderBottom: '1px solid #334155', color: '#94A3B8', textAlign: 'left' }}>
-                <th style={{ padding: '8px 10px' }}>Lakshmi</th>
-                <th style={{ padding: '8px 6px', textAlign: 'center' }}>2023</th>
-                <th style={{ padding: '8px 6px', textAlign: 'center' }}>2024</th>
-                <th style={{ padding: '8px 6px', textAlign: 'center' }}>2025</th>
-                <th style={{ padding: '8px 6px', textAlign: 'center' }}>2026</th>
-                <th style={{ padding: '8px 10px', textAlign: 'right' }}>1-Yr Δ</th>
+              <tr className="border-b border-slate-800 text-slate-400 text-[11px] uppercase tracking-wider font-semibold">
+                <th className="py-3 px-3">Wealth Spoke</th>
+                <th className="py-3 px-3">2024 Baseline</th>
+                <th className="py-3 px-3">2025 Midpoint</th>
+                <th className="py-3 px-3">2026 Present</th>
+                <th className="py-3 px-3">3-Yr Delta Shift</th>
+                <th className="py-3 px-3">Trajectory State</th>
+                <th className="py-3 px-3 text-right">Action</th>
               </tr>
             </thead>
-            <tbody>
-              {INITIAL_LAKSHMI_DATA.map(item => {
-                const s2023 = getFinalLakshmiScore(multiYearState['2023']?.[item.id] || item);
-                const s2024 = getFinalLakshmiScore(multiYearState['2024']?.[item.id] || item);
-                const s2025 = getFinalLakshmiScore(multiYearState['2025']?.[item.id] || item);
-                const s2026 = getFinalLakshmiScore(multiYearState['2026']?.[item.id] || item);
+            <tbody className="divide-y divide-slate-800/60 font-sans">
+              {INITIAL_LAKSHMI_DATA.map(l => {
+                const b24Self = MULTI_YEAR_LONGITUDINAL_DATA.baseline2024.scores[l.id];
+                const b24Emp = MULTI_YEAR_LONGITUDINAL_DATA.baseline2024.empirical[l.id];
+                const m25Self = MULTI_YEAR_LONGITUDINAL_DATA.midpoint2025.scores[l.id];
+                const m25Emp = MULTI_YEAR_LONGITUDINAL_DATA.midpoint2025.empirical[l.id];
+                const p26Self = MULTI_YEAR_LONGITUDINAL_DATA.present2026.scores[l.id];
+                const p26Emp = MULTI_YEAR_LONGITUDINAL_DATA.present2026.empirical[l.id];
 
-                const d = deltaAnalytics.deltas[item.id] || { delta: 0 };
+                const delta24 = b24Emp - b24Self;
+                const delta25 = m25Emp - m25Self;
+                const delta26 = p26Emp - p26Self;
+                const netGain = p26Self - b24Self;
+
+                const isBot = l.id === 'dhanya';
 
                 return (
                   <tr
-                    key={item.id}
-                    onClick={() => onSelectTab(item.id)}
-                    style={{ borderBottom: '1px solid #1E293B', cursor: 'pointer' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0F172A'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    key={l.id}
+                    className={`hover:bg-slate-800/30 transition ${
+                      isBot ? 'bg-rose-950/20 border-l-2 border-rose-500' : ''
+                    }`}
                   >
-                    <td style={{ padding: '10px', color: '#F8FAFC', fontWeight: 700 }}>
-                      <span style={{ color: item.accentColor, marginRight: '6px' }}>●</span>
-                      {item.sanskritName}
+                    <td className="py-3 px-3">
+                      <div className="flex items-center gap-2">
+                        <span>{l.emoji}</span>
+                        <span className="font-bold text-white">{l.sanskritName.split(' ')[0]}</span>
+                        <span className="text-[10px] text-slate-400">{l.englishTitle.split(' ')[0]}</span>
+                      </div>
                     </td>
-                    <td style={{ padding: '10px 6px', textAlign: 'center', color: '#94A3B8' }}>{s2023}</td>
-                    <td style={{ padding: '10px 6px', textAlign: 'center', color: '#94A3B8' }}>{s2024}</td>
-                    <td style={{ padding: '10px 6px', textAlign: 'center', color: '#CBD5E1' }}>{s2025}</td>
-                    <td style={{ padding: '10px 6px', textAlign: 'center', color: '#FBBF24', fontWeight: 800 }}>{s2026}</td>
-                    <td style={{ padding: '10px', textAlign: 'right' }}>
-                      <span style={{
-                        padding: '2px 8px',
-                        borderRadius: '6px',
-                        fontWeight: 800,
-                        fontSize: '11px',
-                        backgroundColor: d.delta > 0 ? 'rgba(16, 185, 129, 0.15)' : (d.delta < 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(148, 163, 184, 0.1)'),
-                        color: d.delta > 0 ? '#34D399' : (d.delta < 0 ? '#F87171' : '#94A3B8')
-                      }}>
-                        {d.delta > 0 ? `+${d.delta}` : d.delta}
+                    <td className="py-3 px-3">
+                      <div className="text-slate-300 font-mono">Likert: {b24Self}% • App: {b24Emp}%</div>
+                      <span className={`text-[10px] font-mono font-bold ${delta24 < -10 ? 'text-rose-400' : 'text-amber-400'}`}>
+                        Δ {delta24 > 0 ? `+${delta24}%` : `${delta24}%`}
                       </span>
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className="text-slate-300 font-mono">Likert: {m25Self}% • App: {m25Emp}%</div>
+                      <span className={`text-[10px] font-mono font-bold ${delta25 < -10 ? 'text-rose-400' : 'text-amber-400'}`}>
+                        Δ {delta25 > 0 ? `+${delta25}%` : `${delta25}%`}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className="text-white font-mono font-bold">Likert: {p26Self}% • App: {p26Emp}%</div>
+                      <span className="text-[10px] text-emerald-400 font-mono font-bold">
+                        Δ {delta26 > 0 ? `+${delta26}%` : `${delta26}%`} ✓
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 font-mono font-bold">
+                      <span className={netGain >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                        {netGain >= 0 ? `+${netGain}% Net Gain` : `${netGain}% Deficit`}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3">
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                          isBot
+                            ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold'
+                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        }`}
+                      >
+                        {isBot ? '🚨 Urgent Bottleneck' : 'Calibrated'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <button
+                        onClick={() => onSelectLakshmi(l.id)}
+                        className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer"
+                      >
+                        Portal →
+                      </button>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* 4-Year Vedic Archetype Metamorphosis Journey */}
+      <div className="bg-slate-900/80 border border-slate-800 p-6 rounded-2xl space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <span>👑</span> 4-Year Vedic Archetype Metamorphosis Journey
+            </h3>
+            <p className="text-xs text-slate-400">
+              How your life-balance persona evolved as systemic friction dissolved.
+            </p>
+          </div>
+          <span className="text-xs text-purple-400 font-mono">Samvatsara Chronology</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* 2024 */}
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 opacity-75">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500 font-mono font-bold">Samvatsara 2024</span>
+              <span className="text-[10px] text-slate-400">Harmonic: 58.2%</span>
+            </div>
+            <div className="text-base font-bold text-slate-200">⚙️ Karma-Yogi</div>
+            <p className="text-[11px] text-slate-400 leading-snug">
+              Heavy physical and cognitive toil. High perception inflation (Δ -18.4%) masking late-night sleep depletion.
+            </p>
+          </div>
+
+          {/* 2025 */}
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 opacity-90">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500 font-mono font-bold">Samvatsara 2025</span>
+              <span className="text-[10px] text-amber-400 font-bold">Harmonic: 63.8%</span>
+            </div>
+            <div className="text-base font-bold text-amber-300">⚔️ Kshatriya-Neta</div>
+            <p className="text-[11px] text-slate-400 leading-snug">
+              Execution discipline took hold. Dhana debt eliminated; Vijaya sprint habits surging, self-awareness calibrated to Δ -9.2%.
+            </p>
+          </div>
+
+          {/* 2026 (Present) */}
+          <div className="bg-gradient-to-b from-indigo-950/60 to-slate-950 p-4 rounded-xl border-2 border-indigo-500/50 space-y-2 shadow-lg shadow-indigo-500/10">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-indigo-400 font-mono font-bold">Samvatsara 2026 (Present)</span>
+              <span className="text-[10px] text-emerald-400 font-bold">Harmonic: 68.4%</span>
+            </div>
+            <div className="text-base font-bold text-white flex items-center gap-1.5">
+              <span>👑 Raja-Rishi</span>
+              <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold">Active</span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-snug">
+              Sovereign balance across 7 of 8 dimensions. Grounded self-awareness (Δ -4.6%). Capped solely by Dhanya biological deficit.
+            </p>
+          </div>
+
+          {/* 2027 (Projected Target) */}
+          <div className="bg-slate-950/60 p-4 rounded-xl border border-dashed border-slate-700 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500 font-mono font-bold">Samvatsara 2027 (Target)</span>
+              <span className="text-[10px] text-purple-400 font-bold">Projected: 78%+</span>
+            </div>
+            <div className="text-base font-bold text-purple-300">🌟 Purna-Purusha</div>
+            <p className="text-[11px] text-slate-400 leading-snug">
+              Unlocking Dhanya to 75%+ via 14-day Dinacharya resets will elevate the harmonic index above 78%, unlocking integral sage-leadership.
+            </p>
+          </div>
         </div>
       </div>
     </div>

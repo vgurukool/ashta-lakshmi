@@ -1,255 +1,263 @@
 import React from 'react';
 import {
-  LayoutDashboard,
-  Sun,
-  Coins,
+  BookOpen,
+  Zap,
+  ClipboardList,
+  Compass,
+  Layers,
+  Activity,
   TrendingUp,
-  PieChart,
-  ClipboardList
+  Lock,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
-import { INITIAL_LAKSHMI_DATA, getFinalLakshmiScore, getScoreRangeConfig } from '../data/lakshmiData';
+import { INITIAL_LAKSHMI_DATA } from '../data/lakshmiData';
 
-export function Sidebar({ activeTab, setActiveTab, lakshmiState }) {
+export function Sidebar({
+  activeTab,
+  setActiveTab,
+  lakshmiState,
+  onSelectLakshmi,
+  isAuthenticated,
+  selectedLakshmiId
+}) {
+  const isGuest = !isAuthenticated;
+
   return (
-    <aside style={{
-      width: '260px',
-      backgroundColor: '#1E293B',
-      borderRight: '1px solid #334155',
-      position: 'fixed',
-      top: 0,
-      bottom: 0,
-      left: 0,
-      zIndex: 40,
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      {/* Header Logo */}
-      <div style={{
-        height: '76px',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 20px',
-        borderBottom: '1px solid #334155'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '10px',
-            background: 'linear-gradient(135deg, #F59E0B, #8B5CF6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 10px rgba(245, 158, 11, 0.3)'
-          }}>
-            <Sun size={20} color="white" />
+    <aside className="w-64 border-r border-slate-800/80 bg-[#0D1424] p-4 flex flex-col justify-between shrink-0 h-screen sticky top-0 overflow-y-auto">
+      <div className="space-y-6">
+        {/* Brand Header */}
+        <div className="flex items-center gap-3 px-1 py-1">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-violet-600 flex items-center justify-center shadow-lg shadow-amber-500/20 text-lg">
+            ☸
           </div>
           <div>
-            <h1 style={{ fontSize: '17px', fontWeight: 900, color: 'white', margin: 0, letterSpacing: '-0.3px' }}>
-              ASHTA LAKSHMI
-            </h1>
-            <span style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Vedic Wealth Platform
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-black text-white tracking-wide">
+                ASHTA LAKSHMI
+              </h1>
+              <span className="text-[9px] uppercase font-bold tracking-widest px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                v2.0
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-400">Vedic Life Harmony Engine</p>
+          </div>
+        </div>
+
+        {/* 1. PUBLIC EXPLORATION FUNNEL (GUEST OPEN) */}
+        <div>
+          <div className="text-[10px] uppercase font-bold tracking-wider text-indigo-400 px-3 mb-2 flex items-center justify-between">
+            <span>Public Exploration</span>
+            <span className="text-[9px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono">
+              Guest Open
             </span>
           </div>
+          <nav className="space-y-1">
+            {/* 1. Overview & Archetypes */}
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                activeTab === 'overview'
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                  : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <span>📜</span> 1. Overview & Blueprint
+              </span>
+              <span className="text-[10px] text-indigo-400 font-bold">Info</span>
+            </button>
+
+            {/* 2. Interconnected Flows */}
+            <button
+              onClick={() => setActiveTab('matrix')}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition cursor-pointer ${
+                activeTab === 'matrix'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold'
+                  : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <span>⚡</span> 2. Interconnected Flows
+              </span>
+              <span className="text-[10px] text-amber-400">Harmony</span>
+            </button>
+
+            {/* 3. Take Assessment */}
+            <button
+              onClick={() => setActiveTab('questionnaire')}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition cursor-pointer ${
+                activeTab === 'questionnaire'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold'
+                  : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <span>📝</span> 3. Take Assessment
+              </span>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold">
+                Free
+              </span>
+            </button>
+          </nav>
+        </div>
+
+        {/* 2. DIAGNOSTIC SUITE */}
+        <div>
+          <div className="flex items-center justify-between px-3 mb-2">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
+              Diagnostic Suite
+            </span>
+            <span className={`text-[9px] font-semibold ${isGuest ? 'text-amber-400' : 'text-emerald-400'}`}>
+              {isGuest ? 'Guest Mode' : 'Live Scores'}
+            </span>
+          </div>
+
+          <nav className="space-y-1">
+            {/* Mandala Radar */}
+            <button
+              onClick={() => setActiveTab('radar')}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition cursor-pointer ${
+                activeTab === 'radar'
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold'
+                  : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <span>☸</span> Mandala Radar
+              </span>
+              <span className="text-[10px] text-slate-500">
+                {isGuest ? '🔒 Gated' : '8 Pillars'}
+              </span>
+            </button>
+
+            {/* 8 Wealth Pages Hub */}
+            <button
+              onClick={() => setActiveTab('wealthHub')}
+              className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold transition mt-1.5 mb-1 cursor-pointer border border-slate-800/60 ${
+                activeTab === 'wealthHub'
+                  ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                  : 'text-slate-300 hover:bg-slate-800/60'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <span>🏛️</span> 8 Wealth Pages Hub
+              </span>
+              <span className="text-[9px] text-slate-400 font-mono">
+                {isGuest ? '🔒 Preview' : 'Directory'}
+              </span>
+            </button>
+
+            {/* 8 Dedicated Individual Lakshmi Portals */}
+            {INITIAL_LAKSHMI_DATA.map(l => {
+              const live = lakshmiState[l.id] || l;
+              const qList = live.questions || [];
+              const score = qList.length
+                ? Math.round(qList.reduce((acc, q) => acc + Number(q.score), 0) / qList.length)
+                : 70;
+              const isBottleneck = score < 40;
+              const isActive = activeTab === 'wealthDetail' && selectedLakshmiId === l.id;
+
+              return (
+                <button
+                  key={l.id}
+                  onClick={() => onSelectLakshmi(l.id)}
+                  className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+                    isActive
+                      ? 'bg-blue-500/20 text-blue-200 border border-blue-500/30 font-semibold'
+                      : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                  }`}
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    <span className="text-sm">{l.emoji}</span>
+                    <span className="truncate">{l.sanskritName.split(' ')[0]}</span>
+                  </span>
+
+                  {isGuest ? (
+                    <span className="text-[10px] text-slate-500">🔒</span>
+                  ) : isBottleneck ? (
+                    <span className="text-xs font-bold text-rose-400 bg-rose-950/60 px-1 py-0.5 rounded border border-rose-800/40">
+                      {score}% ⚠️
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-slate-300">
+                      {score}%
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* 3. DIAGNOSTIC INTELLIGENCE & LONGITUDINAL SUITE */}
+        <div>
+          <div className="flex items-center justify-between px-3 mb-2">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-purple-400">
+              Diagnostic Intelligence
+            </span>
+            <span className="text-[9px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded font-mono font-bold">
+              Live Feeds
+            </span>
+          </div>
+
+          <nav className="space-y-1">
+            {/* Empirical Assessment */}
+            <button
+              onClick={() => setActiveTab('empirical')}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition cursor-pointer ${
+                activeTab === 'empirical'
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold'
+                  : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <span>🔬</span> Empirical Assessment
+              </span>
+              <span className="text-[9px] font-bold text-purple-300 bg-purple-950 px-1.5 py-0.5 rounded border border-purple-800/60">
+                Apps Feed
+              </span>
+            </button>
+
+            {/* Multi-Year Trends */}
+            <button
+              onClick={() => setActiveTab('trends')}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition cursor-pointer ${
+                activeTab === 'trends'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold'
+                  : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <span>📈</span> Multi-Year Trends
+              </span>
+              <span className="text-[9px] font-bold text-cyan-300 bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-800/60 font-mono">
+                2024–2026
+              </span>
+            </button>
+          </nav>
+        </div>
+
+        {/* 4. Decoupled Clean Engine Notice Card */}
+        <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-xl text-[11px] text-slate-400 space-y-1.5">
+          <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+            <span>✓</span> Decoupled Clean Engine
+          </div>
+          <p className="leading-relaxed">
+            Personal finance & bank ledger moved to <strong className="text-slate-200">Dhana Lakshmi</strong>. Ashta Lakshmi focuses 100% on life harmony diagnostics.
+          </p>
         </div>
       </div>
 
-      {/* Nav Menu */}
-      <nav style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', flex: 1 }}>
-        {/* Main Dashboard Tab */}
-        <button
-          className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 14px',
-            borderRadius: '10px',
-            border: 'none',
-            backgroundColor: activeTab === 'dashboard' ? '#6558D3' : 'transparent',
-            color: activeTab === 'dashboard' ? 'white' : '#CBD5E1',
-            fontWeight: 700,
-            fontSize: '13.5px',
-            cursor: 'pointer',
-            textAlign: 'left'
-          }}
-          onClick={() => setActiveTab('dashboard')}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <LayoutDashboard size={17} />
-            <span>Dashboard Overview</span>
-          </div>
-        </button>
-
-        {/* Single Vedic Questionnaire Page Tab */}
-        <button
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 14px',
-            borderRadius: '10px',
-            border: 'none',
-            backgroundColor: activeTab === 'questionnaire' ? 'rgba(139, 92, 246, 0.25)' : 'transparent',
-            color: activeTab === 'questionnaire' ? '#A78BFA' : '#CBD5E1',
-            fontWeight: activeTab === 'questionnaire' ? 800 : 600,
-            fontSize: '13.5px',
-            cursor: 'pointer',
-            textAlign: 'left'
-          }}
-          onClick={() => setActiveTab('questionnaire')}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <ClipboardList size={17} color={activeTab === 'questionnaire' ? '#A78BFA' : '#94A3B8'} />
-            <span>Vedic Questionnaire</span>
-          </div>
-          <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '6px', background: 'rgba(139,92,246,0.2)', color: '#A78BFA' }}>
-            8 Accordions
+      {/* Bottom SSO Realm Status */}
+      <div className="border-t border-slate-800/80 pt-3 mt-4">
+        <div className="flex items-center justify-between text-[11px] text-slate-400">
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Keycloak SSO Realm
           </span>
-        </button>
-
-        {/* Ashta Lakshmi Interconnected Mandala Tab */}
-        <button
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 14px',
-            borderRadius: '10px',
-            border: 'none',
-            backgroundColor: activeTab === 'mandala' ? 'rgba(245, 158, 11, 0.25)' : 'transparent',
-            color: activeTab === 'mandala' ? '#FBBF24' : '#CBD5E1',
-            fontWeight: activeTab === 'mandala' ? 800 : 600,
-            fontSize: '13.5px',
-            cursor: 'pointer',
-            textAlign: 'left'
-          }}
-          onClick={() => setActiveTab('mandala')}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Sun size={17} color={activeTab === 'mandala' ? '#FBBF24' : '#94A3B8'} />
-            <span>Lakshmi Mandala</span>
-          </div>
-          <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '6px', background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24' }}>
-            Symbiosis
-          </span>
-        </button>
-
-        {/* Vedic Spending Audit Tab */}
-        <button
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 14px',
-            borderRadius: '10px',
-            border: 'none',
-            backgroundColor: activeTab === 'spending' ? 'rgba(245, 158, 11, 0.2)' : 'transparent',
-            color: activeTab === 'spending' ? '#FBBF24' : '#CBD5E1',
-            fontWeight: activeTab === 'spending' ? 800 : 600,
-            fontSize: '13.5px',
-            cursor: 'pointer',
-            textAlign: 'left'
-          }}
-          onClick={() => setActiveTab('spending')}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <PieChart size={17} color={activeTab === 'spending' ? '#FBBF24' : '#94A3B8'} />
-            <span>Vedic Spending Audit</span>
-          </div>
-          <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '6px', background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24' }}>
-            Monthly / Yearly
-          </span>
-        </button>
-
-        {/* Longitudinal Trends & YoY Tab */}
-        <button
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 14px',
-            borderRadius: '10px',
-            border: 'none',
-            backgroundColor: activeTab === 'trends' ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-            color: activeTab === 'trends' ? '#818CF8' : '#CBD5E1',
-            fontWeight: activeTab === 'trends' ? 800 : 600,
-            fontSize: '13.5px',
-            cursor: 'pointer',
-            textAlign: 'left',
-            marginBottom: '4px'
-          }}
-          onClick={() => setActiveTab('trends')}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <TrendingUp size={17} color={activeTab === 'trends' ? '#818CF8' : '#94A3B8'} />
-            <span>Multi-Year Trends</span>
-          </div>
-          <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '6px', background: 'rgba(99,102,241,0.2)', color: '#818CF8' }}>
-            YoY
-          </span>
-        </button>
-
-        {/* Section Header */}
-        <div style={{
-          fontSize: '10px',
-          fontWeight: 800,
-          color: '#64748B',
-          textTransform: 'uppercase',
-          letterSpacing: '1px',
-          padding: '12px 12px 6px 12px',
-          marginTop: '6px'
-        }}>
-          8 Forms of Wealth Pages
+          <span className="text-slate-500 font-mono">cnoe</span>
         </div>
-
-        {/* 8 Full Dedicated Individual Lakshmi Pages */}
-        {INITIAL_LAKSHMI_DATA.map((item) => {
-          const Icon = item.icon;
-          const currentLakshmi = lakshmiState[item.id] || item;
-          const calculatedScore = getFinalLakshmiScore(currentLakshmi);
-          const range = getScoreRangeConfig(calculatedScore);
-          const isActive = activeTab === item.id;
-
-          return (
-            <button
-              key={item.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '9px 12px',
-                borderRadius: '10px',
-                border: 'none',
-                backgroundColor: isActive ? '#334155' : 'transparent',
-                color: isActive ? 'white' : '#94A3B8',
-                fontWeight: isActive ? 700 : 600,
-                fontSize: '13px',
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'all 0.15s ease'
-              }}
-              onClick={() => setActiveTab(item.id)}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Icon size={15} color={item.accentColor} />
-                <span>{item.sanskritName}</span>
-              </div>
-              <span style={{
-                fontSize: '11px',
-                fontWeight: 800,
-                color: range.color,
-                backgroundColor: isActive ? `${range.color}25` : 'transparent',
-                padding: '2px 6px',
-                borderRadius: '6px'
-              }}>
-                {calculatedScore}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
+      </div>
     </aside>
   );
 }

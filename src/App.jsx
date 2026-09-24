@@ -1,67 +1,105 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Sidebar } from './components/Sidebar';
-import { DashboardPage } from './pages/DashboardPage';
-import { LakshmiDetailPage } from './pages/LakshmiDetailPage';
-import { TrendsPage } from './pages/TrendsPage';
-import { VedicSpendingPage } from './pages/VedicSpendingPage';
-import { QuestionnairePage } from './pages/QuestionnairePage';
+import { OverviewPage } from './pages/OverviewPage';
 import { MandalaInterconnectedPage } from './pages/MandalaInterconnectedPage';
+import { QuestionnairePage } from './pages/QuestionnairePage';
+import { DashboardPage } from './pages/DashboardPage';
+import { WealthHubPage } from './pages/WealthHubPage';
+import { LakshmiDetailPage } from './pages/LakshmiDetailPage';
+import { EmpiricalTelemetryPage } from './pages/EmpiricalTelemetryPage';
+import { TrendsPage } from './pages/TrendsPage';
 import {
   INITIAL_LAKSHMI_DATA,
   SUPPORTED_YEARS,
-  getDefaultMultiYearState
+  getDefaultMultiYearState,
+  calculateHarmonicIndex,
+  calculateArithmeticMean,
+  findCriticalBottleneck,
+  classifyArchetype
 } from './data/lakshmiData';
-import { Coins, Sun, TrendingUp, Calendar, Copy, RotateCcw, LogIn } from 'lucide-react';
+import { LogIn, LogOut, RotateCcw, AlertTriangle } from 'lucide-react';
 
 export function App({ keycloak, authenticated = false }) {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const isAuthenticated = Boolean(authenticated || keycloak?.authenticated);
+  // If authenticated via Keycloak or prop
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    Boolean(authenticated || keycloak?.authenticated)
+  );
+
+  const [activeTab, setActiveTab] = useState('overview'); // Default: Page 1 (Overview)
+  const [selectedLakshmiId, setSelectedLakshmiId] = useState('adi');
   const [selectedYear, setSelectedYear] = useState('2026');
 
-  // Load multi-year state from localStorage or defaults
+  // Scoped storage key by Keycloak UUID
+  const userId = keycloak?.subject || (isAuthenticated ? 'demo_arjun' : 'guest');
+  const storageKey = `ashta_lakshmi_user_${userId}_state_v2`;
+
+  // Multi-year state
   const [multiYearState, setMultiYearState] = useState(() => {
     try {
-      const savedMulti = localStorage.getItem('ashta_lakshmi_multi_year_state_v2');
-      if (savedMulti) {
-        const parsed = JSON.parse(savedMulti);
-        const result = {};
-        SUPPORTED_YEARS.forEach(yr => {
-          const yrData = parsed[yr] || {};
-          const yearMap = {};
-          INITIAL_LAKSHMI_DATA.forEach(def => {
-            const loaded = yrData[def.id];
-            yearMap[def.id] = {
-              ...def,
-              questions: loaded && loaded.questions ? loaded.questions : def.questions,
-              automatedScore: loaded && loaded.automatedScore !== undefined ? loaded.automatedScore : def.automatedScore,
-              scoreSource: loaded && loaded.scoreSource ? loaded.scoreSource : def.scoreSource
-            };
-          });
-          result[yr] = yearMap;
-        });
-        return result;
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        return JSON.parse(saved);
       }
-
-      const defaultMulti = getDefaultMultiYearState();
-      return defaultMulti;
+      return getDefaultMultiYearState();
     } catch (e) {
       console.error('Error loading Ashta Lakshmi state:', e);
       return getDefaultMultiYearState();
     }
   });
 
-  // Persist multi-year state
+  // Re-load state when userId / Keycloak subject changes
   useEffect(() => {
     try {
-      localStorage.setItem('ashta_lakshmi_multi_year_state_v2', JSON.stringify(multiYearState));
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        setMultiYearState(JSON.parse(saved));
+      } else {
+        // If guest had state and now signs in, migrate guest state
+        const guestSaved = localStorage.getItem('ashta_lakshmi_user_guest_state_v2');
+        if (guestSaved && userId !== 'guest') {
+          setMultiYearState(JSON.parse(guestSaved));
+          localStorage.setItem(storageKey, guestSaved);
+        } else {
+          setMultiYearState(getDefaultMultiYearState());
+        }
+      }
+    } catch (e) {
+      setMultiYearState(getDefaultMultiYearState());
+    }
+  }, [storageKey, userId]);
+
+  // Persist state changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(multiYearState));
     } catch (e) {}
-  }, [multiYearState]);
+  }, [multiYearState, storageKey]);
 
   // Active year state
   const currentYearLakshmiState = multiYearState[selectedYear] || {};
-  const currentLakshmiData = currentYearLakshmiState[activeTab];
 
-  // Update a specific Lakshmi for the active year
+  // Compute live scores for the active year
+  const dimensionScores = useMemo(() => {
+    const scores = {};
+    INITIAL_LAKSHMI_DATA.forEach(def => {
+      const cur = currentYearLakshmiState[def.id] || def;
+      const qList = cur.questions || [];
+      if (qList.length === 0) {
+        scores[def.id] = 50;
+      } else {
+        const sum = qList.reduce((acc, q) => acc + (Number(q.score) || 0), 0);
+        scores[def.id] = Math.round(sum / qList.length);
+      }
+    });
+    return scores;
+  }, [currentYearLakshmiState]);
+
+  const harmonicIndex = calculateHarmonicIndex(dimensionScores);
+  const arithmeticMean = calculateArithmeticMean(dimensionScores);
+  const bottleneck = findCriticalBottleneck(dimensionScores);
+  const archetype = classifyArchetype(dimensionScores, harmonicIndex);
+
+  // Update a specific Lakshmi
   const handleUpdateLakshmi = (updatedLakshmi) => {
     setMultiYearState(prev => ({
       ...prev,
@@ -72,9 +110,13 @@ export function App({ keycloak, authenticated = false }) {
     }));
   };
 
-  // Reset current active year
+  const handleSelectLakshmi = (id) => {
+    setSelectedLakshmiId(id);
+    setActiveTab('wealthDetail');
+  };
+
   const handleResetYear = () => {
-    if (!window.confirm(`Reset assessment questions and scores for year ${selectedYear} to default baseline?`)) return;
+    if (!window.confirm(`Reset assessment scores for year ${selectedYear} to default baseline?`)) return;
     const defaultMulti = getDefaultMultiYearState();
     setMultiYearState(prev => ({
       ...prev,
@@ -82,222 +124,245 @@ export function App({ keycloak, authenticated = false }) {
     }));
   };
 
-  // Carry forward / Clone from previous year
-  const handleCopyFromPreviousYear = () => {
-    const prevYearIdx = SUPPORTED_YEARS.indexOf(selectedYear) - 1;
-    if (prevYearIdx < 0) {
-      alert(`No earlier baseline year available before ${selectedYear}.`);
-      return;
-    }
-    const prevYear = SUPPORTED_YEARS[prevYearIdx];
-    if (!window.confirm(`Copy all evaluation scores and questions from ${prevYear} into ${selectedYear}?`)) return;
-
-    const sourceData = multiYearState[prevYear] || {};
-    const clonedYear = {};
-    INITIAL_LAKSHMI_DATA.forEach(def => {
-      const src = sourceData[def.id] || def;
-      clonedYear[def.id] = {
-        ...def,
-        questions: src.questions ? JSON.parse(JSON.stringify(src.questions)) : def.questions,
-        automatedScore: src.automatedScore !== undefined ? src.automatedScore : def.automatedScore,
-        scoreSource: src.scoreSource || def.scoreSource
-      };
-    });
-
-    setMultiYearState(prev => ({
-      ...prev,
-      [selectedYear]: clonedYear
-    }));
-  };
-
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#0F172A', color: '#F8FAFC' }}>
-      {/* Sidebar */}
+    <div className="flex min-h-screen bg-[#0B0F19] text-slate-100 font-sans antialiased">
+      {/* Sidebar Navigation */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         lakshmiState={currentYearLakshmiState}
+        onSelectLakshmi={handleSelectLakshmi}
+        isAuthenticated={isAuthenticated}
+        selectedLakshmiId={selectedLakshmiId}
       />
 
-      {/* Main Content View */}
-      <div style={{ flex: 1, marginLeft: '260px', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        {/* Top Sticky Header */}
-        <header style={{
-          height: '76px',
-          backgroundColor: '#1E293B',
-          borderBottom: '1px solid #334155',
-          padding: '0 32px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'sticky',
-          top: 0,
-          zIndex: 30
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Sun size={22} color="#FBBF24" />
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* TOP SOVEREIGN HEADER BAR */}
+        <header className="h-16 border-b border-slate-800 bg-[#0F172A]/90 backdrop-blur sticky top-0 z-40 px-6 flex items-center justify-between">
+          {/* Brand Title */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-violet-600 flex items-center justify-center shadow-lg shadow-amber-500/20 text-base">
+              ☸
+            </div>
             <div>
-              <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'white' }}>
-                Ashta Lakshmi — Vedic Wealth Assessment
-              </h2>
-              <span style={{ fontSize: '12px', color: '#94A3B8' }}>
-                {activeTab === 'dashboard' && 'Overview Dashboard & Harmony Index'}
-                {activeTab === 'mandala' && 'Ashta Lakshmi Sacred Interdependency Matrix & Closed-Loop Network'}
-                {activeTab === 'questionnaire' && 'Comprehensive Vedic Questionnaire (8 Lakshmis)'}
-                {activeTab === 'spending' && 'Ashta Lakshmi Holistic Spending Audit & Life-Balance Matrix'}
-                {activeTab === 'trends' && 'Longitudinal Trends & Gain/Loss Analysis'}
-                {currentLakshmiData && `${currentLakshmiData.sanskritName} • Learn, Measure, Plan, Act`}
-              </span>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-black text-white tracking-wide">
+                  ASHTA LAKSHMI
+                </h2>
+                <span className="text-[9px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  Harmonic Engine v2.0
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400">
+                Vedic Life Harmony Assessment & Sovereign Recalibration
+              </p>
             </div>
           </div>
 
-          {/* Right Header Actions: Quick Tools */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {activeTab !== 'spending' && (
-              <>
-                {/* Quick Action: Clone Previous Year */}
-                <button
-                  onClick={handleCopyFromPreviousYear}
-                  title="Carry forward scores from previous assessment baseline"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: 'rgba(51, 65, 85, 0.6)',
-                    border: '1px solid #475569',
-                    padding: '6px 12px',
-                    borderRadius: '8px',
-                    color: '#CBD5E1',
-                    fontSize: '11.5px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Copy size={13} />
-                  Carry Forward
-                </button>
+          {/* Center Diagnostic Harmony Metric */}
+          <div className="hidden md:flex items-center gap-4 bg-slate-900/80 border border-slate-800 px-4 py-1.5 rounded-xl">
+            <div className="text-right">
+              <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+                Harmonic Index (Mean)
+              </div>
+              <div className="text-sm font-extrabold text-amber-300 font-mono">
+                {isAuthenticated ? (
+                  <>
+                    {harmonicIndex}%{' '}
+                    <span className="text-xs font-normal text-slate-400">
+                      vs {arithmeticMean}% Arith.
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-slate-400 font-medium">--% (Guest)</span>
+                )}
+              </div>
+            </div>
 
-                {/* Quick Action: Reset Active Assessment */}
-                <button
-                  onClick={handleResetYear}
-                  title="Reset assessment scores to default"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: 'transparent',
-                    border: '1px solid #475569',
-                    padding: '6px 10px',
-                    borderRadius: '8px',
-                    color: '#94A3B8',
-                    fontSize: '11.5px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <RotateCcw size={13} />
-                  Reset
-                </button>
-              </>
-            )}
-            {isAuthenticated ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '12px', paddingLeft: '12px', borderLeft: '1px solid #334155' }}>
-                <span style={{ fontSize: '12px', color: '#38BDF8', fontWeight: 600 }}>
-                  👤 {keycloak?.tokenParsed?.preferred_username || keycloak?.tokenParsed?.given_name || 'Member'}
-                </span>
-                <button
-                  onClick={() => keycloak ? keycloak.logout({ redirectUri: window.location.origin }) : null}
-                  title="Sign Out of Keycloak SSO"
-                  style={{
-                    background: '#EF4444',
-                    border: 'none',
-                    padding: '5px 10px',
-                    borderRadius: '6px',
-                    color: 'white',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Sign Out
-                </button>
-              </div>
+            <div className="h-6 w-px bg-slate-800"></div>
+
+            <div className="flex items-center gap-1.5">
+              {isAuthenticated ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                  <span className="text-xs font-semibold text-rose-400">
+                    Bottleneck: {bottleneck.name} ({bottleneck.score}%)
+                  </span>
+                </>
+              ) : (
+                <span className="text-xs text-amber-400">📝 Assessment Open</span>
+              )}
+            </div>
+
+            <div className="h-6 w-px bg-slate-800"></div>
+
+            <span className="text-xs font-medium text-purple-300 bg-purple-900/40 px-2 py-0.5 rounded border border-purple-500/30">
+              {isAuthenticated ? archetype.title.split(' ')[0] + ' Archetype' : '🌱 Unprofiled Seeker'}
+            </span>
+          </div>
+
+          {/* User & Session Controls */}
+          <div className="flex items-center gap-3">
+            {/* Demo User Switcher Button */}
+            <div className="flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-lg p-1">
+              <button
+                onClick={() => setIsAuthenticated(true)}
+                className={`px-2.5 py-1 text-xs rounded font-medium transition cursor-pointer ${
+                  isAuthenticated
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Simulate Authenticated Member (Arjun)"
+              >
+                👤 {keycloak?.tokenParsed?.preferred_username || 'Member'}
+              </button>
+              <button
+                onClick={() => setIsAuthenticated(false)}
+                className={`px-2.5 py-1 text-xs rounded font-medium transition cursor-pointer ${
+                  !isAuthenticated
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Switch to Anonymous Guest Seeker"
+              >
+                🌐 Guest
+              </button>
+            </div>
+
+            {/* Year Selector */}
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="bg-slate-900 text-xs font-medium text-slate-200 border border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer"
+            >
+              {SUPPORTED_YEARS.map(yr => (
+                <option key={yr} value={yr}>
+                  Samvatsara {yr}
+                </option>
+              ))}
+            </select>
+
+            {/* Keycloak SSO Sign In / Sign Out */}
+            {keycloak?.authenticated ? (
+              <button
+                onClick={() => keycloak.logout({ redirectUri: window.location.origin })}
+                className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5"
+              >
+                <LogOut size={13} />
+                <span>Sign Out</span>
+              </button>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '12px', paddingLeft: '12px', borderLeft: '1px solid #334155' }}>
-                <button
-                  onClick={() => keycloak ? keycloak.login() : window.location.reload()}
-                  title="Sign In with Keycloak SSO"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: 'linear-gradient(135deg, #D97706, #B45309)',
-                    border: 'none',
-                    padding: '6px 14px',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(217, 119, 6, 0.4)'
-                  }}
-                >
-                  <LogIn size={13} />
-                  Sign In
-                </button>
-              </div>
+              <button
+                onClick={() => keycloak ? keycloak.login() : setIsAuthenticated(true)}
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg shadow-md transition cursor-pointer flex items-center gap-1.5"
+              >
+                <LogIn size={13} />
+                <span>Sign In</span>
+              </button>
             )}
           </div>
         </header>
 
-        {/* Dynamic Pages */}
-        <div style={{ flex: 1 }}>
-          {activeTab === 'dashboard' && (
+        {/* GUEST ONBOARDING ALERT CALLOUT (Visible Only in Guest Mode) */}
+        {!isAuthenticated && (
+          <div className="bg-gradient-to-r from-amber-950/80 via-purple-950/60 to-slate-950 border-b border-amber-500/30 px-6 py-2.5 text-xs text-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-amber-400 text-base">ℹ️</span>
+              <span>
+                <strong>Guest Mode Active:</strong> You are exploring the public assessment without logging in. All teachings are open, but your scores remain private to this browser until you sign in with Keycloak.
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setActiveTab('questionnaire')}
+                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1 rounded text-xs transition cursor-pointer"
+              >
+                ⚡ Take 3-Min Assessment
+              </button>
+              <button
+                onClick={() => keycloak ? keycloak.login() : setIsAuthenticated(true)}
+                className="bg-slate-800 hover:bg-slate-700 text-white font-medium px-3 py-1 rounded text-xs transition cursor-pointer"
+              >
+                Sign In with Keycloak
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Dynamic Pages Render */}
+        <main className="flex-1 overflow-y-auto">
+          {activeTab === 'overview' && (
+            <OverviewPage
+              onNavigate={setActiveTab}
+              onSelectLakshmi={handleSelectLakshmi}
+            />
+          )}
+
+          {activeTab === 'matrix' && (
+            <MandalaInterconnectedPage
+              onNavigate={setActiveTab}
+              onSelectLakshmi={handleSelectLakshmi}
+            />
+          )}
+
+          {activeTab === 'questionnaire' && (
+            <QuestionnairePage
+              lakshmiState={currentYearLakshmiState}
+              onUpdateLakshmi={handleUpdateLakshmi}
+              onNavigate={setActiveTab}
+              isAuthenticated={isAuthenticated}
+              keycloak={keycloak}
+            />
+          )}
+
+          {activeTab === 'radar' && (
             <DashboardPage
               lakshmiState={currentYearLakshmiState}
               multiYearState={multiYearState}
               selectedYear={selectedYear}
               setSelectedYear={setSelectedYear}
-              onSelectTab={setActiveTab}
-              onResetAll={handleResetYear}
+              onNavigate={setActiveTab}
+              onSelectLakshmi={handleSelectLakshmi}
             />
           )}
 
-          {/* Ashta Lakshmi Interconnected Mandala Page */}
-          {activeTab === 'mandala' && (
-            <MandalaInterconnectedPage />
+          {activeTab === 'wealthHub' && (
+            <WealthHubPage
+              lakshmiState={currentYearLakshmiState}
+              onSelectLakshmi={handleSelectLakshmi}
+              onNavigate={setActiveTab}
+            />
           )}
 
-          {/* Single Unified Vedic Questionnaire Page */}
-          {activeTab === 'questionnaire' && (
-            <QuestionnairePage
+          {activeTab === 'wealthDetail' && (
+            <LakshmiDetailPage
+              lakshmiId={selectedLakshmiId}
               lakshmiState={currentYearLakshmiState}
               onUpdateLakshmi={handleUpdateLakshmi}
+              onBackToDashboard={() => setActiveTab('radar')}
+              onSelectLakshmi={handleSelectLakshmi}
+              isAuthenticated={isAuthenticated}
             />
           )}
 
-          {activeTab === 'spending' && (
-            <VedicSpendingPage />
+          {activeTab === 'empirical' && (
+            <EmpiricalTelemetryPage
+              lakshmiState={currentYearLakshmiState}
+              onNavigate={setActiveTab}
+              onSelectLakshmi={handleSelectLakshmi}
+              isAuthenticated={isAuthenticated}
+              keycloak={keycloak}
+            />
           )}
 
           {activeTab === 'trends' && (
             <TrendsPage
-              multiYearState={multiYearState}
-              selectedYear={selectedYear}
-              setSelectedYear={setSelectedYear}
-              onSelectTab={setActiveTab}
+              onNavigate={setActiveTab}
+              onSelectLakshmi={handleSelectLakshmi}
             />
           )}
-
-          {/* 8 Dedicated Individual Lakshmi Pages: Learn -> Measure -> Plan -> Act */}
-          {currentLakshmiData && (
-            <LakshmiDetailPage
-              lakshmiData={currentLakshmiData}
-              selectedYear={selectedYear}
-              onUpdateLakshmi={handleUpdateLakshmi}
-              onBackToDashboard={() => setActiveTab('dashboard')}
-            />
-          )}
-        </div>
+        </main>
       </div>
     </div>
   );
