@@ -67,7 +67,7 @@ export function QuestionnairePage({
           list.push({ ...q, lakshmiId: def.id, lakshmiName: def.sanskritName, emoji: def.emoji, color: def.colorName });
         });
       } else {
-        // Deep clinical (sub-facets)
+        // Deep comprehensive (sub-facets)
         (def.subFacets || []).forEach((sf, idx) => {
           list.push({
             id: `${def.id}_sf_${idx}`,
@@ -160,7 +160,7 @@ export function QuestionnairePage({
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            🔬 Deep Clinical (25m)
+            🔬 Deep Assessment (25m)
           </button>
         </div>
       </div>
